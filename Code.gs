@@ -31,6 +31,8 @@ var FIELD_COL = { name: 1, amount: 2, paidCharles: 3, paidJustine: 4, preDinner:
 var MONEY_FIELDS = { amount: 1, paidCharles: 1, paidJustine: 1 };
 var HEAD_FIELDS = { preDinner: 1, breakfast: 1, lunch: 1 };
 var WRITE_ACTIONS = { add: 1, update: 1, pay: 1, remove: 1, budget: 1 };
+var LOG_NAME = 'Payment Log';   // separate tab, created automatically on the first payment
+var LOG_TZ = 'Asia/Manila';
 
 // ---- Entry points -----------------------------------------------------
 // The page sends POST requests as text/plain so the browser skips the CORS
@@ -48,6 +50,7 @@ function doPost(e) {
 
   try {
     if (req.action === 'read') return json_(readAll_(auth.role, false));
+    if (req.action === 'log') return json_(readLog_());
     if (WRITE_ACTIONS[req.action]) {
       if (auth.role !== 'edit') return json_({ ok: false, error: 'forbidden' });
       return json_(withLock_(function () { return handleWrite_(req); }));
@@ -272,6 +275,72 @@ function handleWrite_(req) {
   if (opId) cache.put('op:' + opId, '1', 21600);
   var out = readAll_('edit', true);   // fresh, recalculated values straight from the Sheet
   out.changedRow = res.row || null;
+
+  // Record every money movement in the Payment Log tab. A logging problem must never
+  // undo or hide a saved change, so it is reported as a warning instead.
+  if (res.txns && res.txns.length) {
+    try {
+      var rowId = null;
+      if (res.row) out.data.items.forEach(function (it) { if (it.row === res.row) rowId = it.id; });
+      logTxns_(res.txns, req.id || rowId);
+    } catch (e) {
+      out.logWarning = 'The change was saved, but writing the Payment Log failed: ' + String(e && e.message || e);
+    }
+  }
+  return out;
+}
+
+// ---- Payment log ------------------------------------------------------
+function logSheet_() {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(LOG_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(LOG_NAME, ss.getNumSheets());
+    var head = sh.getRange(1, 1, 1, 7);
+    head.setValues([['Date & time (Manila)', 'Item', 'Paid by', 'Amount', 'Type', 'Item ID', 'Timestamp (ISO)']]);
+    head.setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function safeText_(s) {
+  s = String(s);
+  return /^[=+\-@]/.test(s) ? "'" + s : s;
+}
+
+// txns: [{ who:'Charles'|'Justine', amount:number (negative = money taken back), kind, item }]
+function logTxns_(txns, itemId) {
+  var sh = logSheet_();
+  var now = new Date();
+  var stamp = Utilities.formatDate(now, LOG_TZ, 'yyyy-MM-dd HH:mm:ss');
+  txns.forEach(function (t) {
+    var r = sh.getLastRow() + 1;
+    var rng = sh.getRange(r, 1, 1, 7);
+    rng.setNumberFormats([['@', '@', '@', '#,##0.00', '@', '@', '@']]);   // keep the date as text, exactly as written
+    rng.setValues([[stamp, safeText_(t.item), t.who, t.amount, t.kind, itemId || '', now.toISOString()]]);
+  });
+}
+
+function readLog_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName(LOG_NAME);
+  if (!sh || sh.getLastRow() < 2) return { ok: true, entries: [] };
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 7).getValues();
+  var entries = [];
+  for (var i = v.length - 1; i >= 0 && entries.length < 2000; i--) {   // newest first
+    var r = v[i];
+    if (!r[6]) continue;
+    entries.push({ at: String(r[6]), item: String(r[1]).replace(/^'/, ''), who: String(r[2]), amount: num_(r[3]), kind: String(r[4]), itemId: String(r[5]) });
+  }
+  return { ok: true, entries: entries };
+}
+
+function payerTxns_(item, cur, next, kind) {
+  var out = [];
+  [['Charles', 'paidCharles'], ['Justine', 'paidJustine']].forEach(function (p) {
+    var d = round2_(next[p[1]] - cur[p[1]]);
+    if (d !== 0) out.push({ who: p[0], amount: d, kind: kind, item: item });
+  });
   return out;
 }
 
@@ -382,7 +451,11 @@ function updateItem_(sheet, req) {
   if (bad) return err_('formula_cell', bad, 'Cell ' + bad + ' contains a formula and was not changed');
 
   writeFields_(sheet, row, cl.values);
-  return { ok: true, row: row };
+  var next = {
+    paidCharles: 'paidCharles' in cl.values ? cl.values.paidCharles : cur.paidCharles,
+    paidJustine: 'paidJustine' in cl.values ? cl.values.paidJustine : cur.paidJustine
+  };
+  return { ok: true, row: row, txns: payerTxns_(cl.values.name || cur.name, cur, next, 'Edited in the app') };
 }
 
 function payItem_(sheet, req) {
@@ -404,7 +477,7 @@ function payItem_(sheet, req) {
 
   var next = {}; next[key] = round2_(cur[key] + amt);
   writeFields_(sheet, row, next);
-  return { ok: true, row: row };
+  return { ok: true, row: row, txns: [{ who: key === 'paidCharles' ? 'Charles' : 'Justine', amount: round2_(amt), kind: 'Payment', item: cur.name }] };
 }
 
 // "Delete" empties the item's input cells (and notes). The row, its formulas and
@@ -428,7 +501,8 @@ function removeItem_(sheet, req) {
   [1, 2, 3, 4, 7, 8, 9].forEach(function (c) { sheet.getRange(row, c).clearNote(); });
   sheet.createDeveloperMetadataFinder().withKey(ID_KEY).withValue(req.id).find()
     .forEach(function (md) { md.remove(); });
-  return { ok: true, row: row };
+  // payments made on a deleted item are taken back in the log so the history still adds up
+  return { ok: true, row: row, txns: payerTxns_(cur.name, cur, { paidCharles: 0, paidJustine: 0 }, 'Item deleted') };
 }
 
 function setBudget_(sheet, req) {
@@ -500,7 +574,8 @@ function addItem_(sheet, item) {
     else if (x !== null && x !== 0) toWrite[k] = x;
   });
   writeFields_(sheet, row, toWrite);
-  return { ok: true, row: row };
+  var next = { paidCharles: toWrite.paidCharles || 0, paidJustine: toWrite.paidJustine || 0 };
+  return { ok: true, row: row, txns: payerTxns_(vals.name, { paidCharles: 0, paidJustine: 0 }, next, 'Initial payment') };
 }
 
 // ---- Helpers ----------------------------------------------------------

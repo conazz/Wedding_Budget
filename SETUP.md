@@ -28,6 +28,15 @@ next time it refreshes (every ~45 seconds while open, or on Refresh).
    The URL stays the same, so you don't change anything in the pages.
 5. Open the editor link, enter the **edit** passphrase.
 
+### Payment log (new)
+
+Every payment is now recorded with the **date and time (Manila time)**, **who paid** (Charles or Justine), the item and the amount.
+- Open **Payment history** on either page, or tap **History** on an item card.
+- The script creates a tab called **Payment Log** in your Google Sheet by itself on the first payment. Your existing tab is not changed. Please don't rename or sort that tab.
+- Logged: payments recorded in the editor, changes to a Paid amount made in the Edit form (as the difference, a decrease shows as a minus), starting payments on a new item, and payments taken back when an item is deleted.
+- **Not** logged: numbers you type straight into Google Sheets.
+- To get this, redeploy the script once (**Deploy > Manage deployments > pencil > New version > Deploy**), as in step 4 above.
+
 ### Test checklist on the TEST copy (do all of these before touching the real Sheet)
 - [ ] Add an item. It appears in the next empty row of the Sheet, and the Remaining / Percentage cells fill in by themselves.
 - [ ] Edit an amount. The Sheet's Remaining and TOTAL update.
@@ -36,6 +45,7 @@ next time it refreshes (every ~45 seconds while open, or on Refresh).
 - [ ] Type letters into an amount box. The page refuses.
 - [ ] Open the editor on two devices, change the same amount on both. The second one shows a "The Sheet changed" choice instead of overwriting.
 - [ ] Turn on airplane mode, make an edit ("Saving…" then "Offline: will retry"), turn it off. It goes through once.
+- [ ] Open the **Payment Log** tab in the Sheet. Each payment you made is a row with date, time and payer.
 - [ ] Look at the Sheet. All the TOTAL / Remaining formulas are still formulas.
 
 **How "delete" works:** it empties the item's cells and keeps the row, so formulas and the totals

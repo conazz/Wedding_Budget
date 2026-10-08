@@ -117,6 +117,17 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
 .seg button[aria-pressed=true]{background:var(--blue-deep);border-color:var(--blue-deep);color:#fff}
 @media (prefers-color-scheme:dark){.seg button[aria-pressed=true]{color:#10202d}}
 
+/* payment history */
+.hday{font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:16px 0 2px}
+.hrow{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.hrow .l b{display:block;font-weight:600;overflow-wrap:anywhere}
+.hrow .l span{font-size:.8rem;color:var(--muted)}
+.hrow .amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;text-align:right}
+.hrow .amt.neg{color:var(--warn)}
+.hsum{font-size:.88rem;color:var(--muted);background:var(--bg);border-radius:10px;padding:8px 12px;margin:8px 0}
+.hsum b{color:var(--ink)}
+.hist-note{font-size:.78rem;color:var(--muted);margin:12px 0 0}
+
 @media (min-width:640px){
   .hero{grid-template-columns:2fr 1fr 1fr;align-items:end}
   .hero .main{grid-column:auto}
@@ -147,6 +158,7 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
       </div>
       <div class="bar-actions">
         <span class="pill" id="status"><i class="dot"></i><span id="statusText">Loading…</span></span>
+        <button class="btn" id="histBtn" type="button">Payment history</button>
         <button class="btn" id="refresh" type="button">Refresh</button>
         <a class="btn" href="./">Dashboard</a>
         <button class="btn" id="lock" type="button">Lock this device</button>
@@ -232,6 +244,17 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
   <div class="row"><button type="button" class="btn" id="conDiscard">Discard mine</button><button type="button" class="btn primary" id="conApply">Apply mine anyway</button></div>
 </div></dialog>
 
+<!-- Payment history -->
+<dialog id="histDlg"><div class="dlg">
+  <h3 class="serif">Payment history</h3>
+  <p class="sub">Every payment recorded through this app, newest first. Manila time.</p>
+  <div id="hFilter"></div>
+  <div class="field"><input id="hQ" type="search" placeholder="Search item or person…" autocomplete="off"></div>
+  <div id="hBody"></div>
+  <p class="hist-note">Payments typed directly into Google Sheets are not recorded here.</p>
+  <div class="row"><button type="button" class="btn" id="hClose">Close</button></div>
+</div></dialog>
+
 <script>
 (function(){
 'use strict';
@@ -267,6 +290,7 @@ var pin = store.get('editpin');
 var state = {server:null, data:null, syncedAt:null, q:''};
 var queue = [];                 // edits not yet confirmed by the Sheet (kept on this device)
 var failed = [];                // edits the Sheet rejected (shown to the user)
+var notices = [];               // saved, but with a warning (e.g. the log could not be written)
 try{ queue = JSON.parse(store.get('queue')||'[]') || []; }catch(e){ queue = []; }
 var pumping = false, retryT = null, retryMs = 8000, refreshing = false, timer = null, current = null, conflictOp = null;
 
@@ -393,7 +417,7 @@ function pump(){
     var op = queue[0];
     setStatus('busy','Saving…');
     api(op.action, Object.assign({opId:op.opId}, op.payload)).then(function(res){
-      if(res.ok){ queue.shift(); saveQueue(); retryMs = 8000; adopt(res); return next(); }
+      if(res.ok){ queue.shift(); saveQueue(); retryMs = 8000; if(res.logWarning) notices.push(res.logWarning); adopt(res); return next(); }
       pumping = false;
       if(res.error==='conflict'){ showConflict(op, res); return; }
       if(res.error==='busy'){ goOffline(); return; }
@@ -406,7 +430,7 @@ function pump(){
   })();
 }
 function renderFailedBanner(){
-  var h = '';
+  var h = notices.map(function(n,i){ return '<div class="banner"><span>'+esc(n)+'</span><button class="btn small" data-dn="'+i+'">OK</button></div>'; }).join('');
   if(failed.length){
     h += failed.map(function(f,i){
       var what = f.op.payload.item ? f.op.payload.item.name : (findNameFor(f.op) || 'an item');
@@ -421,6 +445,8 @@ function findNameFor(op){
   return it ? it.name : '';
 }
 $('banner').addEventListener('click', function(e){
+  var n = e.target.closest('[data-dn]');
+  if(n){ notices.splice(+n.dataset.dn,1); $('banner').innerHTML = renderFailedBanner(); return; }
   var b = e.target.closest('[data-dismiss]'); if(!b) return;
   failed.splice(+b.dataset.dismiss,1); $('banner').innerHTML = renderFailedBanner();
 });
@@ -508,7 +534,8 @@ function renderList(){
       '<div>Remaining<b class="'+(it.remaining<0?'over':'')+'">'+money.format(it.remaining)+'</b></div></div>'+
       '<div class="bar"><i class="c-ch" style="width:'+cw+'%"></i><i class="c-ju" style="width:'+jw+'%"></i></div>'+
       '<div class="actions"><button class="btn small" data-edit="'+esc(it.id)+'"'+(tmp?' disabled':'')+'>Edit</button>'+
-      '<button class="btn small" data-pay="'+esc(it.id)+'"'+(tmp?' disabled':'')+'>+ Payment</button></div></article>';
+      '<button class="btn small" data-pay="'+esc(it.id)+'"'+(tmp?' disabled':'')+'>+ Payment</button>'+
+      '<button class="btn small" data-hist="'+esc(it.id)+'"'+(tmp?' disabled':'')+'>History</button></div></article>';
   }).join('');
 }
 
@@ -633,11 +660,49 @@ $('list').addEventListener('click', function(e){
   var b = e.target.closest('button'); if(!b || b.disabled) return;
   if(b.dataset.edit) openItem(b.dataset.edit);
   else if(b.dataset.pay) openPay(b.dataset.pay);
+  else if(b.dataset.hist){ var hi = findItem(b.dataset.hist); openHistory(b.dataset.hist, hi ? hi.name : ''); }
 });
 $('people').addEventListener('click', function(e){ var b = e.target.closest('[data-bud]'); if(b) openBudget(b.dataset.bud); });
 $('add').addEventListener('click', function(){ openItem(null); });
 $('q').addEventListener('input', function(e){ state.q = e.target.value; renderList(); });
 $('refresh').addEventListener('click', function(){ if(queue.length) pump(); else refresh(true); });
+
+
+/* ---------- payment history ---------- */
+var hist = {rows:null, id:null, name:'', q:''};
+var histDay = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',weekday:'short',month:'short',day:'numeric',year:'numeric'});
+function openHistory(id, name){
+  hist.id = id || null; hist.name = name || ''; hist.q = ''; $('hQ').value = '';
+  $('hFilter').innerHTML = ''; $('hBody').innerHTML = '<div class="empty">Loading…</div>';
+  $('histDlg').showModal();
+  api('log').then(function(res){
+    if(!res.ok){ $('histDlg').close(); authFail(res); return; }
+    hist.rows = res.entries; renderHistory();
+  }).catch(function(){ $('hBody').innerHTML = '<div class="empty">Could not load the history. Check your connection and try again.</div>'; });
+}
+function renderHistory(){
+  var q = hist.q.trim().toLowerCase();
+  var rows = (hist.rows||[]).filter(function(r){
+    return (!hist.id || r.itemId===hist.id) && (!q || (r.item+' '+r.who+' '+r.kind).toLowerCase().indexOf(q) >= 0);
+  });
+  $('hFilter').innerHTML = hist.id ? '<div class="banner info"><span>Showing only “'+esc(hist.name)+'”</span><button class="btn small" id="hAll" type="button">Show all</button></div>' : '';
+  if(!rows.length){ $('hBody').innerHTML = '<div class="empty">No payments logged yet.</div>'; return; }
+  var tot = {Charles:0, Justine:0};
+  rows.forEach(function(r){ if(tot[r.who]!==undefined) tot[r.who] += r.amount; });
+  var html = '<div class="hsum">Total shown: Charles <b>'+money.format(tot.Charles)+'</b> · Justine <b>'+money.format(tot.Justine)+'</b></div>', day = '';
+  rows.forEach(function(r){
+    var d = new Date(r.at), label = histDay.format(d);
+    if(label !== day){ day = label; html += '<div class="hday">'+esc(label)+'</div>'; }
+    var neg = r.amount < 0;
+    html += '<div class="hrow"><div class="l"><b>'+esc(r.item)+'</b><span>'+esc(r.who)+' · '+esc(timeFmt.format(d))+' · '+esc(r.kind)+'</span></div>'+
+      '<div class="amt'+(neg?' neg':'')+'">'+(neg?'−':'+')+money.format(Math.abs(r.amount))+'</div></div>';
+  });
+  $('hBody').innerHTML = html;
+}
+$('hQ').addEventListener('input', function(e){ hist.q = e.target.value; renderHistory(); });
+$('hFilter').addEventListener('click', function(e){ if(e.target.id==='hAll'){ hist.id = null; renderHistory(); } });
+$('hClose').addEventListener('click', function(){ $('histDlg').close(); });
+$('histBtn').addEventListener('click', function(){ openHistory(null, ''); });
 
 /* ---------- lock / unlock ---------- */
 function showApp(){ $('gate').hidden = true; $('app').hidden = false; }
