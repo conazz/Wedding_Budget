@@ -5,7 +5,44 @@ Think of it like a ship: the **Google Sheet is the logbook** (locked in the cabi
 notice board on the pier** that anyone can walk past. The page asks the pilot for figures, and the
 pilot only answers if you give the right passphrase.
 
-**This is Phase 1: read-only.** The page shows your budget; editing comes in Phase 2.
+There are **two pages**, both reading the same Sheet:
+
+| Page | Link | What it does | Passphrase |
+|---|---|---|---|
+| Dashboard | `https://conazz.github.io/Wedding_Budget/` | read-only view | **view** passphrase (or the edit one) |
+| Editor | `https://conazz.github.io/Wedding_Budget/edit.html` | add, edit, record payments, delete | **edit** passphrase only |
+
+Edits made in the editor are written to the Sheet immediately, and the dashboard shows them the
+next time it refreshes (every ~45 seconds while open, or on Refresh).
+
+---
+
+## Part A – Upgrading the script to the editing version (do this once)
+
+1. In your TEST Sheet: **Extensions > Apps Script**.
+2. Click **Code.gs**, select all, delete, then paste the new `Code.gs` from this folder. **Save** (disk icon).
+3. **Optional view-only passphrase:** gear icon (Project Settings) > **Script Properties** > **Add script property**:
+   name `VIEW_PIN`, value = a different passphrase to give family/friends who may look but not change.
+   Your existing `PIN` stays as the **edit** passphrase. Click **Save script properties**.
+4. **Deploy > Manage deployments** > pencil (Edit) > **Version: New version** > **Deploy**.
+   The URL stays the same, so you don't change anything in the pages.
+5. Open the editor link, enter the **edit** passphrase.
+
+### Test checklist on the TEST copy (do all of these before touching the real Sheet)
+- [ ] Add an item. It appears in the next empty row of the Sheet, and the Remaining / Percentage cells fill in by themselves.
+- [ ] Edit an amount. The Sheet's Remaining and TOTAL update.
+- [ ] Record a payment for Charles and one for Justine. The Paid cells go up.
+- [ ] Delete an item (the page asks first). Its cells empty out; totals drop.
+- [ ] Type letters into an amount box. The page refuses.
+- [ ] Open the editor on two devices, change the same amount on both. The second one shows a "The Sheet changed" choice instead of overwriting.
+- [ ] Turn on airplane mode, make an edit ("Saving…" then "Offline: will retry"), turn it off. It goes through once.
+- [ ] Look at the Sheet. All the TOTAL / Remaining formulas are still formulas.
+
+**How "delete" works:** it empties the item's cells and keeps the row, so formulas and the totals
+never shift. Empty rows are reused by the next "Add item". You can delete the blank row yourself in
+Google Sheets if you prefer.
+
+---
 
 ---
 
@@ -102,7 +139,7 @@ You need a free account at **github.com**.
 ### Upload the files (easiest way, no commands)
 
 5. On the new repo page click **uploading an existing file**.
-6. Drag in **only** these from your project folder: `index.html` and `.gitignore`.
+6. Drag in **only** these from your project folder: `index.html`, `edit.html` and `.gitignore`.
    Do **not** upload any `.xlsx` / `.csv` export of your budget.
    (`Code.gs` and `SETUP.md` are harmless to upload, since the passphrase is not in them, but the site doesn't need them.)
 7. Click **Commit changes**.
@@ -148,7 +185,7 @@ would create a *new* URL.)
 Only after everything works on the copy (Phase 2 will add a checklist for add/edit/delete):
 
 1. Repeat **Part 1** inside the real Sheet (new deployment, new URL).
-2. Paste the new URL into `index.html` (Part 2) and update it on GitHub.
+2. Paste the new URL into **both** `index.html` and `edit.html` (Part 2: the `SCRIPT_URL` line) and update them on GitHub.
 
 ---
 

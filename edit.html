@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#5b7a94">
+<title>Wedding Budget · Editor</title>
+<style>
+:root{
+  --bg:#f6f4ef; --card:#ffffff; --ink:#27384a; --muted:#6b7b8a; --line:#e3e6e8;
+  --blue:#5b7a94; --blue-soft:#dde6ee; --blue-deep:#3d5a73;
+  --sage:#7f9c80; --sage-soft:#e3ece3; --sage-deep:#566f58;
+  --warn:#b4694f; --warn-soft:#f6e6df;
+  --shadow:0 1px 2px rgba(39,56,74,.06),0 6px 20px rgba(39,56,74,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#161d24; --card:#1f2a33; --ink:#e8eef3; --muted:#9aabb9; --line:#2f3d49;
+    --blue:#8fb0cb; --blue-soft:#2a3b4a; --blue-deep:#a9c6dd;
+    --sage:#97b898; --sage-soft:#273629; --sage-deep:#b4d1b5;
+    --warn:#e0937a; --warn-soft:#3b2a24; --shadow:none}
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif}
+h1,h2,h3,.serif{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px calc(48px + env(safe-area-inset-bottom))}
+[hidden]{display:none!important}
+a{color:inherit}
+
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:22px 0 14px}
+header h1{margin:0;font-size:1.65rem;line-height:1.2}
+header small{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+.bar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:.85rem;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--sage)}
+.pill.busy .dot{background:var(--blue);animation:pulse 1s infinite}
+.pill.off{color:var(--warn);border-color:var(--warn)}
+.pill.off .dot{background:var(--warn)}
+@keyframes pulse{50%{opacity:.25}}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 16px;cursor:pointer;font-size:.92rem;text-decoration:none;display:inline-block}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:var(--blue-deep);color:#fff;border-color:var(--blue-deep)}
+.btn.danger{background:var(--warn);color:#fff;border-color:var(--warn)}
+.btn.small{padding:6px 12px;font-size:.85rem}
+.btn[disabled]{opacity:.45;cursor:default}
+@media (prefers-color-scheme:dark){.btn.primary,.btn.danger{color:#10202d}}
+
+.hero{background:linear-gradient(135deg,var(--blue-soft),var(--sage-soft));border-radius:20px;padding:18px 20px;box-shadow:var(--shadow);display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.hero .k{font-size:.78rem;color:var(--muted)}
+.hero .v{font-family:Georgia,serif;font-size:1.2rem}
+.hero .main{grid-column:1/-1}
+.hero .main .v{font-size:2rem}
+
+.people{display:grid;grid-template-columns:1fr;gap:12px;margin:14px 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.person{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.person h2{margin:0 0 4px;font-size:1.05rem}
+.person .line{font-size:.9rem;color:var(--muted)}
+.person .line b{color:var(--ink);font-weight:600}
+
+.toolbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 10px;margin-top:10px;display:flex;gap:8px}
+.toolbar input[type=search]{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px}
+
+.list{display:grid;grid-template-columns:1fr;gap:12px}
+.item{display:flex;flex-direction:column;gap:8px}
+.item .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.item .name{font-weight:600;font-size:1.02rem;overflow-wrap:anywhere}
+.badge{flex:0 0 auto;font-size:.72rem;padding:3px 10px;border-radius:99px;font-weight:600}
+.b-paid{background:var(--sage-soft);color:var(--sage-deep)}
+.b-part{background:var(--blue-soft);color:var(--blue-deep)}
+.b-none{background:var(--warn-soft);color:var(--warn)}
+.b-na{background:var(--line);color:var(--muted)}
+.b-wait{background:var(--blue-soft);color:var(--blue-deep);animation:pulse 1.2s infinite}
+.nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:.82rem;color:var(--muted)}
+.nums b{display:block;font-size:1rem;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nums .over{color:var(--warn)}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.c-ch{background:var(--blue)} .c-ju{background:var(--sage)}
+.actions{display:flex;gap:8px;margin-top:2px}
+.empty{text-align:center;color:var(--muted);padding:40px 0;grid-column:1/-1}
+
+.gate{max-width:380px;margin:12vh auto 0;text-align:center}
+.gate h1{font-size:1.9rem;margin:0 0 6px}
+.gate p{color:var(--muted);margin:0 0 20px}
+.gate input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px;text-align:center;font-size:1.1rem;margin-bottom:12px}
+.gate .btn{width:100%;padding:13px}
+.err{color:var(--warn);min-height:1.4em;margin-top:10px;font-size:.92rem}
+.banner{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 14px;margin:8px 0;font-size:.9rem;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.banner.info{background:var(--blue-soft);color:var(--blue-deep)}
+.foot{color:var(--muted);font-size:.8rem;text-align:center;margin-top:28px}
+
+dialog{border:none;border-radius:20px;padding:0;width:calc(100% - 24px);max-width:480px;max-height:92vh;background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(20,30,40,.55)}
+.dlg{padding:20px;overflow:auto}
+.dlg h3{margin:0 0 4px;font-size:1.3rem}
+.dlg .sub{color:var(--muted);font-size:.88rem;margin:0 0 14px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:16px}
+.field textarea{min-height:70px;resize:vertical}
+.field .e{color:var(--warn);font-size:.8rem;min-height:1em}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.dlg .row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.dlg .row .left{margin-right:auto}
+.hint{font-size:.82rem;color:var(--muted);background:var(--bg);border-radius:10px;padding:8px 10px;margin-bottom:12px;white-space:pre-wrap}
+.diff{width:100%;border-collapse:collapse;font-size:.9rem;margin:8px 0}
+.diff th{font-weight:500;color:var(--muted);text-align:left;font-size:.78rem}
+.diff td,.diff th{padding:6px 4px;border-bottom:1px solid var(--line)}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--blue-deep);border-color:var(--blue-deep);color:#fff}
+@media (prefers-color-scheme:dark){.seg button[aria-pressed=true]{color:#10202d}}
+
+@media (min-width:640px){
+  .hero{grid-template-columns:2fr 1fr 1fr;align-items:end}
+  .hero .main{grid-column:auto}
+  .people{grid-template-columns:1fr 1fr}
+  .list{grid-template-columns:1fr 1fr}
+}
+@media (min-width:960px){.list{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="gate" class="gate" hidden>
+    <h1 class="serif">Wedding Budget</h1>
+    <p>Editor. Enter your <b>edit</b> passphrase.</p>
+    <form id="gateForm" autocomplete="off">
+      <input id="pin" type="password" placeholder="Edit passphrase" autocomplete="current-password" required>
+      <button class="btn primary" type="submit">Unlock</button>
+    </form>
+    <div class="err" id="gateErr" role="alert"></div>
+  </section>
+
+  <section id="app" hidden>
+    <header>
+      <div>
+        <h1 class="serif">Wedding Budget · Editor</h1>
+        <small>Changes save straight to the Google Sheet</small>
+      </div>
+      <div class="bar-actions">
+        <span class="pill" id="status"><i class="dot"></i><span id="statusText">Loading…</span></span>
+        <button class="btn" id="refresh" type="button">Refresh</button>
+        <a class="btn" href="./">Dashboard</a>
+        <button class="btn" id="lock" type="button">Lock this device</button>
+      </div>
+    </header>
+
+    <div id="banner"></div>
+
+    <section class="hero">
+      <div class="main"><div class="k">Remaining to pay</div><div class="v" id="hRem">—</div></div>
+      <div><div class="k">Total budget</div><div class="v" id="hTotal">—</div></div>
+      <div><div class="k">Paid so far</div><div class="v" id="hPaid">—</div></div>
+    </section>
+
+    <section class="people" id="people"></section>
+
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Search items…" aria-label="Search items">
+      <button class="btn primary" id="add" type="button">+ Add item</button>
+    </div>
+
+    <section class="list" id="list" aria-live="polite"></section>
+    <p class="foot">Remaining and Percentage are worked out by the Sheet itself; this page never writes to them. Times are Manila time.</p>
+  </section>
+</div>
+
+<!-- Add / edit item -->
+<dialog id="itemDlg"><form class="dlg" id="itemForm" novalidate>
+  <h3 class="serif" id="itemTitle">Add item</h3>
+  <p class="sub" id="itemSub"></p>
+  <div class="hint" id="itemOther" hidden></div>
+  <div class="field"><label for="fName">Item / vendor</label><input id="fName" maxlength="80" autocomplete="off"><div class="e" id="eName"></div></div>
+  <div class="field"><label for="fAmount">Amount (₱)</label><input id="fAmount" inputmode="decimal" autocomplete="off" placeholder="0.00"><div class="e" id="eAmount"></div></div>
+  <div class="grid2">
+    <div class="field"><label for="fPaidC">Paid by Charles (₱)</label><input id="fPaidC" inputmode="decimal" autocomplete="off" placeholder="0.00"><div class="e" id="ePaidC"></div></div>
+    <div class="field"><label for="fPaidJ">Paid by Justine (₱)</label><input id="fPaidJ" inputmode="decimal" autocomplete="off" placeholder="0.00"><div class="e" id="ePaidJ"></div></div>
+  </div>
+  <div class="grid3">
+    <div class="field"><label for="fPre">Pre-dinner pax</label><input id="fPre" inputmode="numeric" autocomplete="off"><div class="e" id="ePre"></div></div>
+    <div class="field"><label for="fBrk">Breakfast pax</label><input id="fBrk" inputmode="numeric" autocomplete="off"><div class="e" id="eBrk"></div></div>
+    <div class="field"><label for="fLun">Lunch pax</label><input id="fLun" inputmode="numeric" autocomplete="off"><div class="e" id="eLun"></div></div>
+  </div>
+  <div class="field"><label for="fNote">Note (saved as a note on the item name cell)</label><textarea id="fNote" maxlength="1000"></textarea></div>
+  <div class="row">
+    <button type="button" class="btn danger left" id="itemDelete" hidden>Delete…</button>
+    <button type="button" class="btn" id="itemCancel">Cancel</button>
+    <button type="submit" class="btn primary">Save</button>
+  </div>
+</form></dialog>
+
+<!-- Record payment -->
+<dialog id="payDlg"><form class="dlg" id="payForm" novalidate>
+  <h3 class="serif" id="payTitle">Record payment</h3>
+  <p class="sub" id="paySub"></p>
+  <div class="field"><label>Paid by</label>
+    <div class="seg" id="payWho"><button type="button" data-w="charles" aria-pressed="true">Charles</button><button type="button" data-w="justine" aria-pressed="false">Justine</button></div></div>
+  <div class="field"><label for="payAmt">Payment amount (₱)</label><input id="payAmt" inputmode="decimal" autocomplete="off" placeholder="0.00"><div class="e" id="ePay"></div></div>
+  <div class="hint" id="payHint"></div>
+  <div class="row"><button type="button" class="btn" id="payCancel">Cancel</button><button type="submit" class="btn primary">Add payment</button></div>
+</form></dialog>
+
+<!-- Delete confirm -->
+<dialog id="delDlg"><div class="dlg">
+  <h3 class="serif">Delete this item?</h3>
+  <p class="sub" id="delSub"></p>
+  <div class="hint">This empties the item's cells in the Sheet (name, amount, payments, headcounts, notes). The totals update by themselves. If you change your mind later, use Google's File &gt; Version history.</div>
+  <div class="row"><button type="button" class="btn" id="delCancel">Keep it</button><button type="button" class="btn danger" id="delOk">Yes, delete</button></div>
+</div></dialog>
+
+<!-- Budget -->
+<dialog id="budDlg"><form class="dlg" id="budForm" novalidate>
+  <h3 class="serif" id="budTitle">Budget</h3>
+  <p class="sub">The total this person plans to spend.</p>
+  <div class="field"><label for="budAmt">Budget (₱)</label><input id="budAmt" inputmode="decimal" autocomplete="off"><div class="e" id="eBud"></div></div>
+  <div class="row"><button type="button" class="btn" id="budCancel">Cancel</button><button type="submit" class="btn primary">Save</button></div>
+</form></dialog>
+
+<!-- Conflict -->
+<dialog id="conDlg"><div class="dlg">
+  <h3 class="serif" id="conTitle">The Sheet changed</h3>
+  <p class="sub" id="conSub">Someone (or you, on another device) changed this in the Sheet after this page loaded it. Nothing has been overwritten.</p>
+  <table class="diff"><thead><tr><th>Field</th><th>Sheet now</th><th>Yours</th></tr></thead><tbody id="conBody"></tbody></table>
+  <div class="row"><button type="button" class="btn" id="conDiscard">Discard mine</button><button type="button" class="btn primary" id="conApply">Apply mine anyway</button></div>
+</div></dialog>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== CONFIG: same web-app URL as the dashboard (see SETUP.md) ===== */
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNUrsymvUA4Sg_9vAeytUV2BwJ4M4ZMjwxhFjdh1JyPRFj5Ls0apykaFzitgcDQ4fj/exec';
+/* ===================================================================== */
+
+var K = 'weddingbudget:';                 // prefix: other apps may share this github.io domain
+var POLL_MS = 45000;
+var store = {
+  get:function(k){try{return localStorage.getItem(K+k)}catch(e){return null}},
+  set:function(k,v){try{localStorage.setItem(K+k,v)}catch(e){}},
+  del:function(k){try{localStorage.removeItem(K+k)}catch(e){}}
+};
+var $ = function(id){return document.getElementById(id)};
+var money = new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'});
+var timeFmt = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'});
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function uuid(){
+  try{ if(window.crypto && crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  return 'op-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+}
+function near(a,b){
+  var an=(a===null||a===undefined||a===''), bn=(b===null||b===undefined||b==='');
+  if(an||bn) return an&&bn;
+  if(typeof a==='number'&&typeof b==='number') return Math.abs(a-b)<0.005;
+  return String(a).trim()===String(b).trim();
+}
+
+var pin = store.get('editpin');
+var state = {server:null, data:null, syncedAt:null, q:''};
+var queue = [];                 // edits not yet confirmed by the Sheet (kept on this device)
+var failed = [];                // edits the Sheet rejected (shown to the user)
+try{ queue = JSON.parse(store.get('queue')||'[]') || []; }catch(e){ queue = []; }
+var pumping = false, retryT = null, retryMs = 8000, refreshing = false, timer = null, current = null, conflictOp = null;
+
+function saveQueue(){ store.set('queue', JSON.stringify(queue)); }
+
+/* ---------- talking to the Apps Script ---------- */
+function api(action, extra){
+  var ctl = new AbortController();
+  var to = setTimeout(function(){ctl.abort()}, 25000);
+  var body = JSON.stringify(Object.assign({action:action, pin:pin}, extra||{}));
+  // text/plain keeps this a "simple" request: no CORS pre-check, which Apps Script can't answer
+  return fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,redirect:'follow',signal:ctl.signal})
+    .then(function(r){clearTimeout(to);return r.json()})
+    .catch(function(e){clearTimeout(to);throw e});
+}
+function setStatus(kind, text){
+  var s = $('status'); s.className = 'pill' + (kind?' '+kind:'');
+  $('statusText').textContent = text;
+}
+function syncedText(){ return 'Synced ' + (state.syncedAt ? timeFmt.format(state.syncedAt) : ''); }
+
+/* ---------- local preview of queued edits ---------- */
+function recompute(it){ it.remaining = Math.round((it.amount - it.paidCharles - it.paidJustine)*100)/100; }
+function applyOp(d, op){
+  var p = op.payload, it;
+  function find(id){ for(var i=0;i<d.items.length;i++) if(d.items[i].id===id) return d.items[i]; return null; }
+  if(op.action==='add'){
+    var x = p.item;
+    it = {id:'tmp-'+op.opId,row:100000+d.items.length,name:x.name,amount:x.amount||0,paidCharles:x.paidCharles||0,paidJustine:x.paidJustine||0,
+      remaining:0,heads:{preDinner:x.preDinner===undefined?null:x.preDinner,breakfast:x.breakfast===undefined?null:x.breakfast,lunch:x.lunch===undefined?null:x.lunch},
+      noteA:x.noteA||'',note:x.noteA||'',pending:true};
+    recompute(it); d.items.push(it);
+  } else if(op.action==='update'){
+    it = find(p.id); if(!it) return;
+    Object.keys(p.changes).forEach(function(k){
+      if(k==='preDinner'||k==='breakfast'||k==='lunch') it.heads[k]=p.changes[k];
+      else if(k==='noteA'){ it.noteA=p.changes[k]; it.note=p.changes[k]; }
+      else it[k]=p.changes[k];
+    });
+    recompute(it); it.pending = true;
+  } else if(op.action==='pay'){
+    it = find(p.id); if(!it) return;
+    var key = p.who==='charles' ? 'paidCharles' : 'paidJustine';
+    it[key] = Math.round((it[key]+p.amount)*100)/100; recompute(it); it.pending = true;
+  } else if(op.action==='remove'){
+    d.items = d.items.filter(function(i){return i.id!==p.id});
+  } else if(op.action==='budget'){
+    if(d.budgets[p.who]) d.budgets[p.who].budget = p.value;
+  }
+}
+function rebuild(){
+  if(!state.server){ state.data = null; return; }
+  var d = clone(state.server);
+  queue.forEach(function(op){ applyOp(d, op); });
+  var T = {amount:0,paidCharles:0,paidJustine:0,remaining:0};
+  d.items.forEach(function(i){T.amount+=i.amount;T.paidCharles+=i.paidCharles;T.paidJustine+=i.paidJustine;T.remaining+=i.remaining});
+  d.totals = T;
+  ['charles','justine'].forEach(function(w){
+    var b = d.budgets[w]; if(b) b.remaining = Math.round((b.budget - (w==='charles'?T.paidCharles:T.paidJustine))*100)/100;
+  });
+  state.data = d;
+}
+function findItem(id){
+  if(!state.data) return null;
+  for(var i=0;i<state.data.items.length;i++) if(state.data.items[i].id===id) return state.data.items[i];
+  return null;
+}
+
+/* ---------- reading ---------- */
+function anyDialogOpen(){
+  var ds = document.querySelectorAll('dialog'); for(var i=0;i<ds.length;i++) if(ds[i].open) return true; return false;
+}
+function adopt(res){
+  state.server = res.data; state.syncedAt = new Date(res.serverTime);
+  store.set('cache', JSON.stringify({data:res.data, at:res.serverTime}));
+  rebuild(); render();
+}
+function refresh(force){
+  if(!pin || refreshing || pumping || queue.length) return;
+  if(!force && anyDialogOpen()) return;
+  refreshing = true; setStatus('busy','Updating…');
+  api('read').then(function(res){
+    refreshing = false;
+    if(!res.ok) return authFail(res);
+    if(!res.canEdit){ lockDevice(true); $('gateErr').textContent='That is the view-only passphrase. The editor needs the edit passphrase.'; return; }
+    adopt(res); setStatus('', syncedText()); $('banner').innerHTML = renderFailedBanner();
+  }).catch(function(){
+    refreshing = false;
+    setStatus('off', state.syncedAt ? 'Offline · showing data from '+timeFmt.format(state.syncedAt) : 'Offline · will retry');
+  });
+}
+function authFail(res){
+  if(res.error==='bad_pin'||res.error==='locked'||res.error==='pin_not_set'||res.error==='forbidden'){
+    lockDevice(true);
+    $('gateErr').textContent =
+      res.error==='locked' ? 'Too many wrong tries. Please wait '+(res.retryMinutes||15)+' minutes.' :
+      res.error==='pin_not_set' ? 'No passphrase is set on the Google side yet (see SETUP.md).' :
+      res.error==='forbidden' ? 'This passphrase can only view. Use the edit passphrase.' :
+      'That passphrase is not right.' + (res.triesLeft!=null ? ' '+res.triesLeft+' tries left.' : '');
+    return true;
+  }
+  return false;
+}
+
+/* ---------- writing: queue + retry, nothing is lost silently ---------- */
+function enqueue(action, payload){
+  queue.push({opId:uuid(), action:action, payload:payload, at:Date.now()});
+  saveQueue(); rebuild(); render(); pump();
+}
+function goOffline(){
+  setStatus('off','Offline: will retry · '+queue.length+' waiting');
+  clearTimeout(retryT);
+  retryT = setTimeout(pump, retryMs);
+  retryMs = Math.min(retryMs*2, 60000);
+}
+function pump(){
+  if(pumping || !pin || !queue.length || conflictOp) return;
+  pumping = true; clearTimeout(retryT);
+  (function next(){
+    if(!queue.length){
+      pumping = false; retryMs = 8000;
+      setStatus('', syncedText()); $('banner').innerHTML = renderFailedBanner(); return;
+    }
+    var op = queue[0];
+    setStatus('busy','Saving…');
+    api(op.action, Object.assign({opId:op.opId}, op.payload)).then(function(res){
+      if(res.ok){ queue.shift(); saveQueue(); retryMs = 8000; adopt(res); return next(); }
+      pumping = false;
+      if(res.error==='conflict'){ showConflict(op, res); return; }
+      if(res.error==='busy'){ goOffline(); return; }
+      if(authFail(res)) return;
+      // the Sheet rejected this edit (invalid, formula cell, item gone): keep it visible, don't retry
+      queue.shift(); saveQueue(); failed.push({op:op,res:res});
+      rebuild(); render(); $('banner').innerHTML = renderFailedBanner();
+      pump();
+    }).catch(function(){ pumping = false; goOffline(); });
+  })();
+}
+function renderFailedBanner(){
+  var h = '';
+  if(failed.length){
+    h += failed.map(function(f,i){
+      var what = f.op.payload.item ? f.op.payload.item.name : (findNameFor(f.op) || 'an item');
+      var why = f.res.error==='not_found' ? 'it no longer exists in the Sheet' : (f.res.message || f.res.error);
+      return '<div class="banner"><span>Could not save a change to “'+esc(what)+'”: '+esc(why)+'.</span><button class="btn small" data-dismiss="'+i+'">OK</button></div>';
+    }).join('');
+  }
+  return h;
+}
+function findNameFor(op){
+  var it = op.payload && op.payload.id ? (findItem(op.payload.id) || (state.server && state.server.items.filter(function(i){return i.id===op.payload.id})[0])) : null;
+  return it ? it.name : '';
+}
+$('banner').addEventListener('click', function(e){
+  var b = e.target.closest('[data-dismiss]'); if(!b) return;
+  failed.splice(+b.dataset.dismiss,1); $('banner').innerHTML = renderFailedBanner();
+});
+
+/* ---------- conflicts ---------- */
+var FIELD_LABEL = {name:'Name',amount:'Amount',paidCharles:'Paid by Charles',paidJustine:'Paid by Justine',preDinner:'Pre-dinner pax',breakfast:'Breakfast pax',lunch:'Lunch pax',noteA:'Note',budget:'Budget'};
+function fmtVal(f,v){
+  if(v===null||v===undefined||v==='') return '—';
+  if(f==='amount'||f==='paidCharles'||f==='paidJustine'||f==='budget') return money.format(v);
+  return String(v);
+}
+function showConflict(op, res){
+  conflictOp = {op:op, res:res};
+  var action = op.action;
+  $('conTitle').textContent = action==='remove' ? 'This item changed before it could be deleted' : 'The Sheet changed';
+  $('conSub').textContent = action==='pay'
+    ? 'The paid amount in the Sheet is different from what this page showed. Nothing was overwritten. You can add your payment on top of the Sheet’s current amount, or discard it.'
+    : 'Someone (or you, on another device) changed this in the Sheet after this page loaded it. Nothing was overwritten. Choose which to keep.';
+  $('conApply').textContent = action==='remove' ? 'Delete anyway' : action==='pay' ? 'Add my payment' : 'Apply mine anyway';
+  $('conDiscard').textContent = action==='remove' ? 'Keep the item' : 'Use the Sheet’s';
+  $('conBody').innerHTML = res.diffs.map(function(d){
+    var mine = action==='pay' ? '+ '+money.format(op.payload.amount) : action==='remove' ? 'delete' : fmtVal(d.field,d.mine);
+    return '<tr><td>'+esc(FIELD_LABEL[d.field]||d.field)+'</td><td><b>'+esc(fmtVal(d.field,d.sheet))+'</b></td><td>'+esc(mine)+'</td></tr>';
+  }).join('');
+  setStatus('off','Needs your decision');
+  $('conDlg').showModal();
+}
+$('conApply').addEventListener('click', function(){
+  var c = conflictOp; if(!c) return;
+  c.res.diffs.forEach(function(d){
+    var p = c.op.payload;
+    if(c.op.action==='pay' || c.op.action==='budget') p.base = d.sheet;
+    else p.base[d.field] = d.sheet;
+  });
+  conflictOp = null; $('conDlg').close(); pump();
+});
+$('conDiscard').addEventListener('click', function(){
+  var c = conflictOp; if(!c) return;
+  queue = queue.filter(function(o){return o.opId!==c.op.opId}); saveQueue();
+  conflictOp = null; $('conDlg').close(); rebuild(); render();
+  if(queue.length) pump(); else refresh(true);
+});
+$('conDlg').addEventListener('cancel', function(e){ e.preventDefault(); });   // must choose
+
+/* ---------- rendering ---------- */
+function statusOf(it){
+  var paid = it.paidCharles + it.paidJustine;
+  if(!it.amount) return 'na';
+  if(paid <= 0) return 'none';
+  if(it.remaining <= 0.005) return 'paid';
+  return 'part';
+}
+var BADGE = {paid:['b-paid','Paid'],part:['b-part','Partly paid'],none:['b-none','Unpaid'],na:['b-na','No amount yet']};
+
+function render(){
+  var d = state.data; if(!d) return;
+  var T = d.totals;
+  $('hRem').textContent = money.format(T.remaining);
+  $('hTotal').textContent = money.format(T.amount);
+  $('hPaid').textContent = money.format(T.paidCharles+T.paidJustine);
+  $('people').innerHTML = [['charles','Charles',T.paidCharles],['justine','Justine',T.paidJustine]].map(function(p){
+    var b = d.budgets[p[0]]; if(!b) return '';
+    return '<article class="card person"><div><h2 class="serif">'+p[1]+'’s budget</h2>'+
+      '<div class="line">Budget <b>'+money.format(b.budget)+'</b></div>'+
+      '<div class="line">Paid <b>'+money.format(p[2])+'</b></div>'+
+      '<div class="line">Left <b style="color:'+(b.remaining<0?'var(--warn)':'inherit')+'">'+money.format(b.remaining)+'</b></div></div>'+
+      '<button class="btn small" data-bud="'+p[0]+'">Change</button></article>';
+  }).join('');
+  renderList();
+}
+function renderList(){
+  var d = state.data; if(!d) return;
+  var q = state.q.trim().toLowerCase();
+  var items = d.items.filter(function(it){ return !q || (it.name+' '+it.note).toLowerCase().indexOf(q) >= 0; })
+                     .sort(function(a,b){return a.row-b.row});
+  if(!items.length){ $('list').innerHTML = '<div class="empty">Nothing matches.</div>'; return; }
+  $('list').innerHTML = items.map(function(it){
+    var s = statusOf(it), bd = it.pending ? ['b-wait','Saving…'] : BADGE[s], paid = it.paidCharles + it.paidJustine;
+    var cw = it.amount ? Math.min(100,it.paidCharles/it.amount*100) : 0;
+    var jw = it.amount ? Math.min(100-cw,it.paidJustine/it.amount*100) : 0;
+    var tmp = String(it.id).indexOf('tmp-')===0;
+    return '<article class="card item">'+
+      '<div class="head"><div class="name">'+esc(it.name||'(unnamed)')+'</div><span class="badge '+bd[0]+'">'+bd[1]+'</span></div>'+
+      '<div class="nums"><div>Amount<b>'+money.format(it.amount)+'</b></div><div>Paid<b>'+money.format(paid)+'</b></div>'+
+      '<div>Remaining<b class="'+(it.remaining<0?'over':'')+'">'+money.format(it.remaining)+'</b></div></div>'+
+      '<div class="bar"><i class="c-ch" style="width:'+cw+'%"></i><i class="c-ju" style="width:'+jw+'%"></i></div>'+
+      '<div class="actions"><button class="btn small" data-edit="'+esc(it.id)+'"'+(tmp?' disabled':'')+'>Edit</button>'+
+      '<button class="btn small" data-pay="'+esc(it.id)+'"'+(tmp?' disabled':'')+'>+ Payment</button></div></article>';
+  }).join('');
+}
+
+/* ---------- parsing / validation ---------- */
+function parseMoney(s){
+  s = String(s).replace(/[₱,\s]/g,'');
+  if(s==='') return 0;
+  if(!/^\d+(\.\d{1,2})?$/.test(s)) return NaN;
+  var n = parseFloat(s); return n > 1e9 ? NaN : n;
+}
+function parseHead(s){
+  s = String(s).trim(); if(s==='') return null;
+  if(!/^\d{1,5}$/.test(s)) return NaN; return parseInt(s,10);
+}
+function showErr(id,msg){ $(id).textContent = msg || ''; }
+function numStr(n){ return n ? String(n) : ''; }
+
+/* ---------- add / edit item ---------- */
+function openItem(id){
+  current = id ? findItem(id) : null;
+  var it = current;
+  $('itemTitle').textContent = it ? 'Edit item' : 'Add item';
+  $('itemSub').textContent = it ? 'Remaining is worked out by the Sheet after you save.' : 'It goes into the next free row of the Sheet.';
+  $('fName').value = it ? it.name : '';
+  $('fAmount').value = it ? numStr(it.amount) : '';
+  $('fPaidC').value = it ? numStr(it.paidCharles) : '';
+  $('fPaidJ').value = it ? numStr(it.paidJustine) : '';
+  $('fPre').value = it && it.heads.preDinner!=null ? it.heads.preDinner : '';
+  $('fBrk').value = it && it.heads.breakfast!=null ? it.heads.breakfast : '';
+  $('fLun').value = it && it.heads.lunch!=null ? it.heads.lunch : '';
+  $('fNote').value = it ? it.noteA : '';
+  var other = it && it.note && it.note !== it.noteA ? it.note.slice((it.noteA||'').length).trim() : '';
+  $('itemOther').hidden = !other; $('itemOther').textContent = other ? 'Other notes in the Sheet (edit them in Google Sheets):\n'+other : '';
+  $('itemDelete').hidden = !it;
+  ['eName','eAmount','ePaidC','ePaidJ','ePre','eBrk','eLun'].forEach(function(e){showErr(e,'')});
+  $('itemDlg').showModal();
+  if(!it) $('fName').focus();
+}
+$('itemForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var name = $('fName').value.trim(), bad = false;
+  ['eName','eAmount','ePaidC','ePaidJ','ePre','eBrk','eLun'].forEach(function(x){showErr(x,'')});
+  if(!name){ showErr('eName','Please enter a name'); bad = true; }
+  else if(name.length > 80){ showErr('eName','Keep it under 80 characters'); bad = true; }
+  else if(/^[=+\-@]/.test(name)){ showErr('eName','Cannot start with = + - or @'); bad = true; }
+  var amount = parseMoney($('fAmount').value), pc = parseMoney($('fPaidC').value), pj = parseMoney($('fPaidJ').value);
+  var h1 = parseHead($('fPre').value), h2 = parseHead($('fBrk').value), h3 = parseHead($('fLun').value);
+  if(isNaN(amount)){ showErr('eAmount','Numbers only, e.g. 12,500.50'); bad = true; }
+  if(isNaN(pc)){ showErr('ePaidC','Numbers only'); bad = true; }
+  if(isNaN(pj)){ showErr('ePaidJ','Numbers only'); bad = true; }
+  if(h1!==null && isNaN(h1)){ showErr('ePre','Whole number'); bad = true; }
+  if(h2!==null && isNaN(h2)){ showErr('eBrk','Whole number'); bad = true; }
+  if(h3!==null && isNaN(h3)){ showErr('eLun','Whole number'); bad = true; }
+  if(bad) return;
+  var vals = {name:name,amount:amount,paidCharles:pc,paidJustine:pj,preDinner:h1,breakfast:h2,lunch:h3,noteA:$('fNote').value.trim()};
+  if(!current){
+    enqueue('add', {item:vals});
+  } else {
+    var orig = {name:current.name,amount:current.amount,paidCharles:current.paidCharles,paidJustine:current.paidJustine,
+      preDinner:current.heads.preDinner,breakfast:current.heads.breakfast,lunch:current.heads.lunch,noteA:current.noteA||''};
+    var changes = {}, base = {};
+    Object.keys(vals).forEach(function(k){ if(!near(vals[k], orig[k])){ changes[k]=vals[k]; base[k]=orig[k]; } });
+    if(Object.keys(changes).length) enqueue('update', {id:current.id, changes:changes, base:base});
+  }
+  $('itemDlg').close();
+});
+$('itemCancel').addEventListener('click', function(){ $('itemDlg').close(); });
+
+/* ---------- delete ---------- */
+$('itemDelete').addEventListener('click', function(){
+  if(!current) return;
+  $('delSub').textContent = '“'+current.name+'” · amount '+money.format(current.amount)+' · paid '+money.format(current.paidCharles+current.paidJustine);
+  $('itemDlg').close(); $('delDlg').showModal();
+});
+$('delCancel').addEventListener('click', function(){ $('delDlg').close(); });
+$('delOk').addEventListener('click', function(){
+  var it = current; $('delDlg').close(); if(!it) return;
+  enqueue('remove', {id:it.id, base:{name:it.name,amount:it.amount,paidCharles:it.paidCharles,paidJustine:it.paidJustine}});
+});
+
+/* ---------- record payment ---------- */
+var payWho = 'charles';
+function setWho(w){ payWho = w; [].forEach.call($('payWho').children, function(b){ b.setAttribute('aria-pressed', b.dataset.w===w?'true':'false'); }); }
+function openPay(id){
+  current = findItem(id); if(!current) return;
+  $('paySub').textContent = current.name + ' · remaining ' + money.format(current.remaining);
+  $('payAmt').value = ''; showErr('ePay',''); setWho('charles');
+  $('payHint').textContent = 'Charles has paid '+money.format(current.paidCharles)+' · Justine has paid '+money.format(current.paidJustine)+'. The payment is added on top.';
+  $('payDlg').showModal(); $('payAmt').focus();
+}
+$('payWho').addEventListener('click', function(e){ var b = e.target.closest('button'); if(b) setWho(b.dataset.w); });
+$('payForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var n = parseMoney($('payAmt').value);
+  if(isNaN(n) || n <= 0){ showErr('ePay','Enter a payment above 0 (numbers only)'); return; }
+  var it = current; if(!it) return;
+  var key = payWho==='charles' ? 'paidCharles' : 'paidJustine';
+  enqueue('pay', {id:it.id, who:payWho, amount:n, base:it[key]});
+  $('payDlg').close();
+});
+$('payCancel').addEventListener('click', function(){ $('payDlg').close(); });
+
+/* ---------- budgets ---------- */
+var budWho = null;
+function openBudget(who){
+  budWho = who; var b = state.data.budgets[who]; if(!b) return;
+  $('budTitle').textContent = (who==='charles'?'Charles':'Justine') + '’s budget';
+  $('budAmt').value = numStr(b.budget); showErr('eBud',''); $('budDlg').showModal(); $('budAmt').focus();
+}
+$('budForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var n = parseMoney($('budAmt').value);
+  if(isNaN(n)){ showErr('eBud','Numbers only, e.g. 750,000'); return; }
+  var cur = state.data.budgets[budWho].budget;
+  if(!near(n,cur)) enqueue('budget', {who:budWho, value:n, base:cur});
+  $('budDlg').close();
+});
+$('budCancel').addEventListener('click', function(){ $('budDlg').close(); });
+
+/* ---------- list + header events ---------- */
+$('list').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b || b.disabled) return;
+  if(b.dataset.edit) openItem(b.dataset.edit);
+  else if(b.dataset.pay) openPay(b.dataset.pay);
+});
+$('people').addEventListener('click', function(e){ var b = e.target.closest('[data-bud]'); if(b) openBudget(b.dataset.bud); });
+$('add').addEventListener('click', function(){ openItem(null); });
+$('q').addEventListener('input', function(e){ state.q = e.target.value; renderList(); });
+$('refresh').addEventListener('click', function(){ if(queue.length) pump(); else refresh(true); });
+
+/* ---------- lock / unlock ---------- */
+function showApp(){ $('gate').hidden = true; $('app').hidden = false; }
+function lockDevice(keepMsg){
+  pin = null; state.server = null; state.data = null; state.syncedAt = null;
+  store.del('editpin'); store.del('cache');
+  clearInterval(timer); timer = null; clearTimeout(retryT);
+  $('app').hidden = true; $('gate').hidden = false;
+  $('list').innerHTML = ''; $('people').innerHTML = '';
+  if(!keepMsg) $('gateErr').textContent = '';
+  $('pin').value = '';
+}
+$('lock').addEventListener('click', function(){
+  if(queue.length && !confirm(queue.length+' change(s) have not reached the Sheet yet. Locking will throw them away. Lock anyway?')) return;
+  if(queue.length){ queue = []; saveQueue(); }
+  lockDevice(false);
+});
+$('gateForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var v = $('pin').value; if(!v) return;
+  pin = v; $('gateErr').textContent = 'Checking…';
+  api('read').then(function(res){
+    if(!res.ok){ pin = null; return authFail(res); }
+    if(!res.canEdit){ pin = null; $('gateErr').textContent = 'That is the view-only passphrase. The editor needs the edit passphrase.'; return; }
+    store.set('editpin', v); $('gateErr').textContent = '';
+    showApp(); adopt(res); setStatus('', syncedText()); startPolling(); if(queue.length) pump();
+  }).catch(function(){ pin = null; $('gateErr').textContent = 'Could not reach Google. Check your connection and try again.'; });
+});
+
+/* ---------- auto-refresh: only while the tab is visible and nothing is waiting to send ---------- */
+function startPolling(){
+  clearInterval(timer);
+  timer = setInterval(function(){ if(!document.hidden){ if(queue.length) pump(); else refresh(false); } }, POLL_MS);
+}
+function onWake(){
+  if(!pin || document.hidden) return;
+  if(queue.length){ pump(); return; }
+  if(!state.syncedAt || Date.now() - state.syncedAt.getTime() > 10000) refresh(false);
+}
+document.addEventListener('visibilitychange', onWake);
+window.addEventListener('focus', onWake);
+window.addEventListener('online', function(){ retryMs = 8000; onWake(); if(queue.length) pump(); });
+window.addEventListener('beforeunload', function(e){ if(queue.length){ e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- start ---------- */
+if(!SCRIPT_URL){
+  $('gate').hidden = false;
+  $('gate').innerHTML = '<h1 class="serif">Wedding Budget</h1><p>Not connected yet. See SETUP.md.</p>';
+} else if(pin){
+  showApp();
+  var c = store.get('cache');
+  if(c){ try{ var o = JSON.parse(c); state.server = o.data; state.syncedAt = new Date(o.at); rebuild(); render(); }catch(e){} }
+  setStatus('busy','Updating…');
+  if(queue.length) pump(); else refresh(true);
+  startPolling();
+} else {
+  $('gate').hidden = false;
+}
+})();
+</script>
+</body>
+</html>
