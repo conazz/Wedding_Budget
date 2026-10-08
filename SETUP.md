@@ -28,6 +28,10 @@ next time it refreshes (every ~45 seconds while open, or on Refresh).
    The URL stays the same, so you don't change anything in the pages.
 5. Open the editor link, enter the **edit** passphrase.
 
+### Who paid what (new)
+
+On both pages, each person's budget card has a **Who paid what** button. It lists every item that person has paid toward, largest first, with their share of their own payments and how much of each item they covered. It uses figures the pages already load, so **no script change or redeploy is needed** for it.
+
 ### Payment log (new)
 
 Every payment is now recorded with the **date and time (Manila time)**, **who paid** (Charles or Justine), the item and the amount.

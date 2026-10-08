@@ -128,6 +128,19 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
 .hsum b{color:var(--ink)}
 .hist-note{font-size:.78rem;color:var(--muted);margin:12px 0 0}
 
+/* who paid what */
+.brk-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 4px}
+.brk-sum div{background:var(--bg);border-radius:12px;padding:8px 12px}
+.brk-sum .k{font-size:.75rem;color:var(--muted)}
+.brk-sum .v{font-family:Georgia,serif;font-size:1.05rem}
+.brow{padding:10px 0;border-bottom:1px solid var(--line)}
+.brow .top{display:flex;justify-content:space-between;gap:10px}
+.brow .top b{font-weight:600;overflow-wrap:anywhere}
+.brow .top span{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.brow .meta{font-size:.78rem;color:var(--muted);margin-top:2px}
+.brow .bar{margin:6px 0 2px}
+.dlg .row .left{margin-right:auto}
+
 @media (min-width:640px){
   .hero{grid-template-columns:2fr 1fr 1fr;align-items:end}
   .hero .main{grid-column:auto}
@@ -253,6 +266,15 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
   <div id="hBody"></div>
   <p class="hist-note">Payments typed directly into Google Sheets are not recorded here.</p>
   <div class="row"><button type="button" class="btn" id="hClose">Close</button></div>
+</div></dialog>
+
+<!-- Who paid what -->
+<dialog id="brkDlg"><div class="dlg">
+  <h3 class="serif">Who paid what</h3>
+  <p class="sub">What each person has paid so far, item by item.</p>
+  <div class="seg" id="brkWho"><button type="button" data-w="charles" aria-pressed="true">Charles</button><button type="button" data-w="justine" aria-pressed="false">Justine</button></div>
+  <div id="brkBody"></div>
+  <div class="row"><button type="button" class="btn left" id="brkLog">Dated payments</button><button type="button" class="btn" id="brkClose">Close</button></div>
 </div></dialog>
 
 <script>
@@ -513,9 +535,10 @@ function render(){
       '<div class="line">Budget <b>'+money.format(b.budget)+'</b></div>'+
       '<div class="line">Paid <b>'+money.format(p[2])+'</b></div>'+
       '<div class="line">Left <b style="color:'+(b.remaining<0?'var(--warn)':'inherit')+'">'+money.format(b.remaining)+'</b></div></div>'+
-      '<button class="btn small" data-bud="'+p[0]+'">Change</button></article>';
+      '<div style="display:flex;flex-direction:column;gap:6px"><button class="btn small" data-brk="'+p[0]+'">Who paid what</button><button class="btn small" data-bud="'+p[0]+'">Change</button></div></article>';
   }).join('');
   renderList();
+  if($('brkDlg').open) renderBreakdown();
 }
 function renderList(){
   var d = state.data; if(!d) return;
@@ -662,7 +685,10 @@ $('list').addEventListener('click', function(e){
   else if(b.dataset.pay) openPay(b.dataset.pay);
   else if(b.dataset.hist){ var hi = findItem(b.dataset.hist); openHistory(b.dataset.hist, hi ? hi.name : ''); }
 });
-$('people').addEventListener('click', function(e){ var b = e.target.closest('[data-bud]'); if(b) openBudget(b.dataset.bud); });
+$('people').addEventListener('click', function(e){
+  var k = e.target.closest('[data-brk]'); if(k){ openBreakdown(k.dataset.brk); return; }
+  var b = e.target.closest('[data-bud]'); if(b) openBudget(b.dataset.bud);
+});
 $('add').addEventListener('click', function(){ openItem(null); });
 $('q').addEventListener('input', function(e){ state.q = e.target.value; renderList(); });
 $('refresh').addEventListener('click', function(){ if(queue.length) pump(); else refresh(true); });
@@ -671,8 +697,8 @@ $('refresh').addEventListener('click', function(){ if(queue.length) pump(); else
 /* ---------- payment history ---------- */
 var hist = {rows:null, id:null, name:'', q:''};
 var histDay = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',weekday:'short',month:'short',day:'numeric',year:'numeric'});
-function openHistory(id, name){
-  hist.id = id || null; hist.name = name || ''; hist.q = ''; $('hQ').value = '';
+function openHistory(id, name, q){
+  hist.id = id || null; hist.name = name || ''; hist.q = q || ''; $('hQ').value = q || '';
   $('hFilter').innerHTML = ''; $('hBody').innerHTML = '<div class="empty">Loading…</div>';
   $('histDlg').showModal();
   api('log').then(function(res){
@@ -703,6 +729,42 @@ $('hQ').addEventListener('input', function(e){ hist.q = e.target.value; renderHi
 $('hFilter').addEventListener('click', function(e){ if(e.target.id==='hAll'){ hist.id = null; renderHistory(); } });
 $('hClose').addEventListener('click', function(){ $('histDlg').close(); });
 $('histBtn').addEventListener('click', function(){ openHistory(null, ''); });
+
+
+/* ---------- who paid what (per-person breakdown) ---------- */
+var brkWho = 'charles';
+function openBreakdown(who){ brkWho = who; renderBreakdown(); $('brkDlg').showModal(); }
+function renderBreakdown(){
+  var d = state.data; if(!d) return;
+  var key = brkWho==='charles' ? 'paidCharles' : 'paidJustine';
+  var name = brkWho==='charles' ? 'Charles' : 'Justine';
+  var cls = brkWho==='charles' ? 'c-ch' : 'c-ju';
+  [].forEach.call($('brkWho').children, function(b){ b.setAttribute('aria-pressed', b.dataset.w===brkWho?'true':'false'); });
+  var b = d.budgets[brkWho] || {budget:0, remaining:0};
+  var rows = d.items.filter(function(i){return i[key] > 0}).sort(function(x,y){return y[key]-x[key]});
+  var total = rows.reduce(function(s,i){return s+i[key]}, 0);
+  var used = b.budget ? total/b.budget : 0;
+  var html = '<div class="brk-sum">'+
+    '<div><div class="k">Paid so far</div><div class="v">'+money.format(total)+'</div></div>'+
+    '<div><div class="k">Budget</div><div class="v">'+money.format(b.budget)+'</div></div>'+
+    '<div><div class="k">Left in budget</div><div class="v" style="color:'+(b.remaining<0?'var(--warn)':'inherit')+'">'+money.format(b.remaining)+'</div></div>'+
+    '<div><div class="k">Budget used</div><div class="v">'+(Math.round(used*1000)/10)+'%</div></div></div>';
+  if(!rows.length){
+    html += '<div class="empty">'+esc(name)+' has not paid anything yet.</div>';
+  } else {
+    html += rows.map(function(i){
+      var share = total ? i[key]/total*100 : 0;
+      var ofItem = i.amount ? Math.round(i[key]/i.amount*100)+'% of this item' : '';
+      return '<div class="brow"><div class="top"><b>'+esc(i.name)+'</b><span>'+money.format(i[key])+'</span></div>'+
+        '<div class="bar"><i class="'+cls+'" style="width:'+share+'%"></i></div>'+
+        '<div class="meta">'+(Math.round(share*10)/10)+'% of '+esc(name)+'’s payments'+(ofItem?' · '+ofItem:'')+'</div></div>';
+    }).join('');
+  }
+  $('brkBody').innerHTML = html;
+}
+$('brkWho').addEventListener('click', function(e){ var b = e.target.closest('button'); if(b){ brkWho = b.dataset.w; renderBreakdown(); } });
+$('brkClose').addEventListener('click', function(){ $('brkDlg').close(); });
+$('brkLog').addEventListener('click', function(){ $('brkDlg').close(); openHistory(null, '', brkWho==='charles' ? 'Charles' : 'Justine'); });
 
 /* ---------- lock / unlock ---------- */
 function showApp(){ $('gate').hidden = true; $('app').hidden = false; }
