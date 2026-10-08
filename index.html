@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#5b7a94">
+<title>Wedding Budget</title>
+<style>
+:root{
+  --bg:#f6f4ef; --card:#ffffff; --ink:#27384a; --muted:#6b7b8a; --line:#e3e6e8;
+  --blue:#5b7a94; --blue-soft:#dde6ee; --blue-deep:#3d5a73;
+  --sage:#7f9c80; --sage-soft:#e3ece3; --sage-deep:#566f58;
+  --warn:#b4694f; --warn-soft:#f6e6df;
+  --shadow:0 1px 2px rgba(39,56,74,.06),0 6px 20px rgba(39,56,74,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#161d24; --card:#1f2a33; --ink:#e8eef3; --muted:#9aabb9; --line:#2f3d49;
+    --blue:#8fb0cb; --blue-soft:#2a3b4a; --blue-deep:#a9c6dd;
+    --sage:#97b898; --sage-soft:#273629; --sage-deep:#b4d1b5;
+    --warn:#e0937a; --warn-soft:#3b2a24; --shadow:none}
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif}
+h1,h2,.serif{font-family:Georgia,"Times New Roman",serif;font-weight:500;letter-spacing:.01em}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px calc(48px + env(safe-area-inset-bottom))}
+[hidden]{display:none!important}
+
+/* header */
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:22px 0 14px}
+header h1{margin:0;font-size:1.65rem;line-height:1.2}
+header small{display:block;color:var(--muted);font-size:.85rem;margin-top:2px}
+.bar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:7px;font-size:.85rem;color:var(--muted);background:var(--card);
+  border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--sage)}
+.pill.busy .dot{background:var(--blue);animation:pulse 1s infinite}
+.pill.off .dot{background:var(--warn)}
+@keyframes pulse{50%{opacity:.25}}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:.9rem}
+.btn:hover{border-color:var(--blue)}
+.btn.primary{background:var(--blue-deep);color:#fff;border-color:var(--blue-deep)}
+@media (prefers-color-scheme:dark){.btn.primary{color:#10202d}}
+
+/* hero */
+.hero{background:linear-gradient(135deg,var(--blue-soft),var(--sage-soft));border-radius:20px;padding:22px 20px;box-shadow:var(--shadow)}
+.hero .label{font-size:.8rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.hero .big{font-family:Georgia,serif;font-size:2.3rem;line-height:1.15;margin:4px 0 2px}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:18px}
+.tile .v{font-family:Georgia,serif;font-size:1.25rem}
+.tile .k{font-size:.78rem;color:var(--muted)}
+.meter{height:12px;border-radius:99px;background:rgba(255,255,255,.55);overflow:hidden;display:flex;margin-top:16px}
+@media (prefers-color-scheme:dark){.meter{background:rgba(255,255,255,.1)}}
+.meter i,.bar i{display:block;height:100%}
+.c-ch{background:var(--blue)} .c-ju{background:var(--sage)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:8px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+
+/* people */
+.people{display:grid;grid-template-columns:1fr;gap:12px;margin:14px 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.person h2{margin:0 0 8px;font-size:1.1rem;display:flex;align-items:center;gap:8px}
+.person .row{display:flex;justify-content:space-between;font-size:.92rem;padding:3px 0}
+.person .row span:first-child{color:var(--muted)}
+.person .left{font-weight:600}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;display:flex;margin:10px 0 4px}
+
+/* toolbar */
+.toolbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 10px;margin-top:10px;display:grid;gap:10px}
+.toolbar .top{display:flex;gap:8px}
+.toolbar input[type=search],.toolbar select{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px}
+.toolbar select{flex:0 0 auto;max-width:48%}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:.88rem;white-space:nowrap}
+.chip[aria-pressed=true]{background:var(--blue-deep);border-color:var(--blue-deep);color:#fff}
+@media (prefers-color-scheme:dark){.chip[aria-pressed=true]{color:#10202d}}
+
+/* items */
+.list{display:grid;grid-template-columns:1fr;gap:12px}
+.item{display:flex;flex-direction:column;gap:6px}
+.item .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.item .name{font-weight:600;font-size:1.02rem;overflow-wrap:anywhere}
+.badge{flex:0 0 auto;font-size:.72rem;padding:3px 10px;border-radius:99px;font-weight:600;letter-spacing:.02em}
+.b-paid{background:var(--sage-soft);color:var(--sage-deep)}
+.b-part{background:var(--blue-soft);color:var(--blue-deep)}
+.b-none{background:var(--warn-soft);color:var(--warn)}
+.b-na{background:var(--line);color:var(--muted)}
+.nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;font-size:.82rem;color:var(--muted)}
+.nums b{display:block;font-size:1rem;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:420px){.nums b{font-size:.9rem}.nums{gap:4px}}
+.nums .rem b.over{color:var(--warn)}
+.split{font-size:.8rem;color:var(--muted)}
+.heads{display:flex;flex-wrap:wrap;gap:6px}
+.heads span{font-size:.75rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px 8px;color:var(--muted)}
+details.note{font-size:.85rem;color:var(--muted)}
+details.note summary{cursor:pointer;color:var(--blue-deep);list-style:none}
+details.note summary::-webkit-details-marker{display:none}
+details.note p{white-space:pre-wrap;margin:6px 0 0;background:var(--bg);padding:10px;border-radius:10px}
+.empty{text-align:center;color:var(--muted);padding:40px 0}
+.foot{color:var(--muted);font-size:.8rem;text-align:center;margin-top:28px}
+
+/* lock + messages */
+.gate{max-width:380px;margin:12vh auto 0;text-align:center}
+.gate h1{font-size:1.9rem;margin:0 0 6px}
+.gate p{color:var(--muted);margin:0 0 20px}
+.gate input{width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px;text-align:center;font-size:1.1rem;margin-bottom:12px}
+.gate .btn{width:100%;padding:13px}
+.err{color:var(--warn);min-height:1.4em;margin-top:10px;font-size:.92rem}
+.banner{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:10px 14px;margin:6px 0;font-size:.9rem}
+
+@media (min-width:640px){
+  .tiles{grid-template-columns:repeat(4,1fr)}
+  .people{grid-template-columns:1fr 1fr}
+  .list{grid-template-columns:1fr 1fr}
+  .hero{padding:28px}
+  .hero .big{font-size:2.8rem}
+}
+@media (min-width:960px){
+  .list{grid-template-columns:repeat(3,1fr)}
+  header h1{font-size:2rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Locked state: the page contains no budget data until the PIN is accepted -->
+  <section id="gate" class="gate" hidden>
+    <h1 class="serif">Wedding Budget</h1>
+    <p>Enter your passphrase to open the logbook.</p>
+    <form id="gateForm" autocomplete="off">
+      <input id="pin" type="password" placeholder="Passphrase" autocomplete="current-password" required>
+      <button class="btn primary" type="submit">Unlock</button>
+    </form>
+    <div class="err" id="gateErr" role="alert"></div>
+  </section>
+
+  <section id="app" hidden>
+    <header>
+      <div>
+        <h1 class="serif">Wedding Budget</h1>
+        <small>Charles &amp; Justine</small>
+      </div>
+      <div class="bar-actions">
+        <span class="pill" id="status"><i class="dot"></i><span id="statusText">Loading…</span></span>
+        <button class="btn" id="refresh" type="button">Refresh</button>
+        <button class="btn" id="lock" type="button">Lock this device</button>
+      </div>
+    </header>
+
+    <div id="banner"></div>
+
+    <section class="hero" aria-label="Summary">
+      <div class="label">Remaining to pay</div>
+      <div class="big" id="hRemaining">—</div>
+      <div class="meter" id="hMeter"></div>
+      <div class="legend"><span><b class="c-ch"></b>Paid by Charles</span><span><b class="c-ju"></b>Paid by Justine</span><span id="hPct"></span></div>
+      <div class="tiles">
+        <div class="tile"><div class="v" id="tTotal">—</div><div class="k">Total budget</div></div>
+        <div class="tile"><div class="v" id="tPaid">—</div><div class="k">Paid so far</div></div>
+        <div class="tile"><div class="v" id="tRem">—</div><div class="k">Balance remaining</div></div>
+        <div class="tile"><div class="v" id="tPct">—</div><div class="k">Used</div></div>
+      </div>
+    </section>
+
+    <section class="people" id="people" aria-label="Personal budgets"></section>
+
+    <div class="toolbar">
+      <div class="top">
+        <input id="q" type="search" placeholder="Search items…" aria-label="Search items">
+        <select id="sort" aria-label="Sort">
+          <option value="sheet">Sheet order</option>
+          <option value="remaining">Most remaining</option>
+          <option value="amount">Largest amount</option>
+          <option value="pct">Least paid %</option>
+          <option value="name">A – Z</option>
+        </select>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip" data-f="all" aria-pressed="true">All</button>
+        <button class="chip" data-f="open" aria-pressed="false">Unpaid / balance due</button>
+        <button class="chip" data-f="none" aria-pressed="false">Nothing paid</button>
+        <button class="chip" data-f="part" aria-pressed="false">Partly paid</button>
+        <button class="chip" data-f="paid" aria-pressed="false">Fully paid</button>
+      </div>
+    </div>
+
+    <section class="list" id="list" aria-live="polite"></section>
+    <p class="foot">Figures come straight from the Google Sheet. Times shown in Manila time.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ===== CONFIG: paste your Apps Script web-app URL between the quotes (see SETUP.md) ===== */
+var SCRIPT_URL = '';
+/* ========================================================================================= */
+
+var K = 'weddingbudget:';                 // prefix: other apps may share this github.io domain
+var POLL_MS = 45000;
+var store = {
+  get:function(k){try{return localStorage.getItem(K+k)}catch(e){return null}},
+  set:function(k,v){try{localStorage.setItem(K+k,v)}catch(e){}},
+  del:function(k){try{localStorage.removeItem(K+k)}catch(e){}}
+};
+var $ = function(id){return document.getElementById(id)};
+var money = new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'});
+var timeFmt = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'});
+var dayFmt  = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric'});
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function pct(n){return (Math.round(n*1000)/10).toFixed(1).replace(/\.0$/,'')+'%'}
+
+var pin = store.get('pin');
+var state = {data:null, version:null, syncedAt:null, filter:'all', q:'', sort:'sheet'};
+var inFlight = false, timer = null;
+
+/* ---------- talking to the Apps Script ---------- */
+function api(action, extra){
+  var ctl = new AbortController();
+  var to = setTimeout(function(){ctl.abort()}, 25000);
+  var body = JSON.stringify(Object.assign({action:action, pin:pin}, extra||{}));
+  // text/plain keeps this a "simple" request: no CORS pre-check, which Apps Script can't answer
+  return fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:body,redirect:'follow',signal:ctl.signal})
+    .then(function(r){clearTimeout(to);return r.json()})
+    .catch(function(e){clearTimeout(to);throw e});
+}
+
+function setStatus(kind, text){
+  var s = $('status'); s.className = 'pill' + (kind?' '+kind:'');
+  $('statusText').textContent = text;
+}
+
+function refresh(){
+  if(inFlight || !pin) return;
+  inFlight = true; setStatus('busy','Updating…');
+  api('read').then(function(res){
+    inFlight = false;
+    if(!res.ok) return handleAuthError(res);
+    state.data = res.data; state.version = res.version; state.syncedAt = new Date(res.serverTime);
+    store.set('cache', JSON.stringify({data:res.data, at:res.serverTime}));
+    $('banner').innerHTML = '';
+    setStatus('', 'Synced ' + timeFmt.format(state.syncedAt));
+    render();
+  }).catch(function(){
+    inFlight = false;
+    setStatus('off', state.syncedAt ? 'Offline · showing ' + timeFmt.format(state.syncedAt) : 'Offline · will retry');
+  });
+}
+
+function handleAuthError(res){
+  if(res.error === 'bad_pin' || res.error === 'locked' || res.error === 'pin_not_set'){
+    lockDevice(true);
+    $('gateErr').textContent =
+      res.error === 'locked' ? 'Too many wrong tries. Please wait '+(res.retryMinutes||15)+' minutes.' :
+      res.error === 'pin_not_set' ? 'No PIN is set on the Google side yet (see SETUP.md).' :
+      'That passphrase is not right.' + (res.triesLeft!=null ? ' '+res.triesLeft+' tries left.' : '');
+  } else {
+    setStatus('off','Problem reading the Sheet');
+    $('banner').innerHTML = '<div class="banner">'+esc(res.message||res.error||'Unknown error')+'</div>';
+  }
+}
+
+/* ---------- rendering ---------- */
+function statusOf(it){
+  var paid = it.paidCharles + it.paidJustine;
+  if(!it.amount) return 'na';
+  if(paid <= 0) return 'none';
+  if(it.remaining <= 0.005) return 'paid';
+  return 'part';
+}
+var BADGE = {paid:['b-paid','Paid'],part:['b-part','Partly paid'],none:['b-none','Unpaid'],na:['b-na','No amount yet']};
+
+function render(){
+  var d = state.data; if(!d) return;
+  var T = d.totals, paid = T.paidCharles + T.paidJustine;
+  var used = T.amount ? paid/T.amount : 0;
+
+  $('hRemaining').textContent = money.format(T.remaining);
+  $('tTotal').textContent = money.format(T.amount);
+  $('tPaid').textContent  = money.format(paid);
+  $('tRem').textContent   = money.format(T.remaining);
+  $('tPct').textContent   = pct(used);
+  $('hPct').textContent   = pct(used) + ' of the budget paid';
+  var cw = T.amount ? Math.min(100, T.paidCharles/T.amount*100) : 0;
+  var jw = T.amount ? Math.min(100-cw, T.paidJustine/T.amount*100) : 0;
+  $('hMeter').innerHTML = '<i class="c-ch" style="width:'+cw+'%"></i><i class="c-ju" style="width:'+jw+'%"></i>';
+
+  var people = [['charles','Charles',T.paidCharles,'c-ch'],['justine','Justine',T.paidJustine,'c-ju']];
+  $('people').innerHTML = people.map(function(p){
+    var b = d.budgets[p[0]]; if(!b) return '';
+    var w = b.budget ? Math.min(100,p[2]/b.budget*100) : 0;
+    return '<article class="card person"><h2 class="serif">'+p[1]+'’s budget</h2>'+
+      '<div class="row"><span>Budget</span><span>'+money.format(b.budget)+'</span></div>'+
+      '<div class="row"><span>Paid so far</span><span>'+money.format(p[2])+'</span></div>'+
+      '<div class="row left"><span>Left in budget</span><span style="color:'+(b.remaining<0?'var(--warn)':'inherit')+'">'+money.format(b.remaining)+'</span></div>'+
+      '<div class="bar"><i class="'+p[3]+'" style="width:'+w+'%"></i></div></article>';
+  }).join('');
+
+  renderList();
+}
+
+function renderList(){
+  var d = state.data; if(!d) return;
+  var q = state.q.trim().toLowerCase();
+  var items = d.items.filter(function(it){
+    if(q && (it.name+' '+it.note).toLowerCase().indexOf(q) < 0) return false;
+    var s = statusOf(it);
+    switch(state.filter){
+      case 'open': return s==='none' || s==='part';
+      case 'none': case 'part': case 'paid': return s===state.filter;
+    }
+    return true;
+  });
+  var pctPaid = function(it){return it.amount ? (it.paidCharles+it.paidJustine)/it.amount : 2};
+  var sorters = {
+    remaining:function(a,b){return b.remaining-a.remaining},
+    amount:function(a,b){return b.amount-a.amount},
+    pct:function(a,b){return pctPaid(a)-pctPaid(b)},
+    name:function(a,b){return a.name.localeCompare(b.name)},
+    sheet:function(a,b){return a.row-b.row}
+  };
+  items.sort(sorters[state.sort]);
+
+  if(!items.length){ $('list').innerHTML = '<div class="empty" style="grid-column:1/-1">Nothing matches.</div>'; return; }
+
+  $('list').innerHTML = items.map(function(it){
+    var s = statusOf(it), bd = BADGE[s], paid = it.paidCharles + it.paidJustine;
+    var cw = it.amount ? Math.min(100,it.paidCharles/it.amount*100) : 0;
+    var jw = it.amount ? Math.min(100-cw,it.paidJustine/it.amount*100) : 0;
+    var heads = [];
+    if(it.heads.preDinner!=null)  heads.push('Pre-dinner · '+it.heads.preDinner);
+    if(it.heads.breakfast!=null)  heads.push('Breakfast · '+it.heads.breakfast);
+    if(it.heads.lunch!=null)      heads.push('Lunch · '+it.heads.lunch);
+    var split = [];
+    if(it.paidCharles) split.push('Charles '+money.format(it.paidCharles));
+    if(it.paidJustine) split.push('Justine '+money.format(it.paidJustine));
+    return '<article class="card item">'+
+      '<div class="head"><div class="name">'+esc(it.name||'(unnamed)')+'</div><span class="badge '+bd[0]+'">'+bd[1]+'</span></div>'+
+      '<div class="nums"><div>Amount<b>'+money.format(it.amount)+'</b></div><div>Paid<b>'+money.format(paid)+'</b></div>'+
+      '<div class="rem">Remaining<b class="'+(it.remaining<0?'over':'')+'">'+money.format(it.remaining)+'</b></div></div>'+
+      '<div class="bar"><i class="c-ch" style="width:'+cw+'%"></i><i class="c-ju" style="width:'+jw+'%"></i></div>'+
+      (split.length?'<div class="split">'+esc(split.join(' · '))+'</div>':'')+
+      (heads.length?'<div class="heads">'+heads.map(function(h){return '<span>'+esc(h)+'</span>'}).join('')+'</div>':'')+
+      (it.note?'<details class="note"><summary>Show note</summary><p>'+esc(it.note)+'</p></details>':'')+
+      '</article>';
+  }).join('');
+}
+
+/* ---------- lock / unlock ---------- */
+function showApp(){ $('gate').hidden = true; $('app').hidden = false; }
+function lockDevice(keepMsg){
+  pin = null; state.data = null; state.syncedAt = null;
+  store.del('pin'); store.del('cache');
+  clearInterval(timer); timer = null;
+  $('app').hidden = true; $('gate').hidden = false;
+  $('list').innerHTML = ''; $('people').innerHTML = '';
+  if(!keepMsg) $('gateErr').textContent = '';
+  $('pin').value = '';
+}
+
+$('gateForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var v = $('pin').value; if(!v) return;
+  pin = v; $('gateErr').textContent = 'Checking…';
+  api('read').then(function(res){
+    if(!res.ok){ pin = null; return handleAuthError(res); }
+    store.set('pin', v); $('gateErr').textContent = '';
+    state.data = res.data; state.version = res.version; state.syncedAt = new Date(res.serverTime);
+    store.set('cache', JSON.stringify({data:res.data, at:res.serverTime}));
+    showApp(); setStatus('', 'Synced ' + timeFmt.format(state.syncedAt)); render(); startPolling();
+  }).catch(function(){ pin = null; $('gateErr').textContent = 'Could not reach Google. Check your connection and try again.'; });
+});
+$('lock').addEventListener('click', function(){ lockDevice(false); });
+$('refresh').addEventListener('click', refresh);
+
+/* ---------- controls ---------- */
+$('q').addEventListener('input', function(e){ state.q = e.target.value; renderList(); });
+$('sort').addEventListener('change', function(e){ state.sort = e.target.value; renderList(); });
+$('chips').addEventListener('click', function(e){
+  var b = e.target.closest('.chip'); if(!b) return;
+  state.filter = b.dataset.f;
+  [].forEach.call(document.querySelectorAll('.chip'), function(c){ c.setAttribute('aria-pressed', c===b ? 'true':'false'); });
+  renderList();
+});
+
+/* ---------- auto-refresh: only while the tab is visible ---------- */
+function startPolling(){
+  clearInterval(timer);
+  timer = setInterval(function(){ if(!document.hidden) refresh(); }, POLL_MS);
+}
+function onWake(){
+  if(!pin || document.hidden) return;
+  if(!state.syncedAt || Date.now() - state.syncedAt.getTime() > 10000) refresh();
+}
+document.addEventListener('visibilitychange', onWake);
+window.addEventListener('focus', onWake);
+window.addEventListener('online', onWake);
+
+/* ---------- start ---------- */
+if(!SCRIPT_URL){
+  $('gate').hidden = false;
+  $('gate').innerHTML = '<h1 class="serif">Wedding Budget</h1><p>Not connected yet. Follow SETUP.md, then paste your web-app URL into SCRIPT_URL near the top of the script in this file.</p>';
+} else if(pin){
+  showApp();
+  var c = store.get('cache');
+  if(c){ try{ var o = JSON.parse(c); state.data = o.data; state.syncedAt = new Date(o.at); setStatus('busy','Updating…'); render(); }catch(e){} }
+  refresh(); startPolling();
+} else {
+  $('gate').hidden = false;
+}
+})();
+</script>
+</body>
+</html>

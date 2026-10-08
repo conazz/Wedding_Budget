@@ -1,0 +1,15 @@
+# Never commit budget data
+*.xlsx
+*.xls
+*.csv
+*.ods
+*.tsv
+*.numbers
+*.json
+!package.json
+
+# Local scratch
+.claude/
+*.log
+.DS_Store
+Thumbs.db
