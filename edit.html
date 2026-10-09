@@ -811,7 +811,11 @@ $('brkLog').addEventListener('click', function(){ $('brkDlg').close(); openHisto
 var noteEntry = null;
 $('hBody').addEventListener('click', function(e){
   var b = e.target.closest('[data-note]'); if(!b) return;
-  noteEntry = (hist.rows||[]).filter(function(r){return r.id===b.dataset.note})[0]; if(!noteEntry) return;
+  noteEntry = (hist.rows||[]).filter(function(r){return r.id===b.dataset.note})[0];
+  if(!noteEntry){
+    $('hFilter').innerHTML = '<div class="banner"><span>Notes need the updated script. In Google: Extensions &gt; Apps Script, paste the new Code.gs, then Deploy &gt; Manage deployments &gt; pencil &gt; New version &gt; Deploy. Then reload this page.</span></div>';
+    return;
+  }
   $('noteSub').textContent = noteEntry.item+' · '+noteEntry.who+' · '+money.format(Math.abs(noteEntry.amount));
   $('noteText').value = noteEntry.note || ''; showErr('eNote',''); $('histDlg').close(); $('noteDlg').showModal(); $('noteText').focus();
 });
