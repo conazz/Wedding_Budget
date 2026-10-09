@@ -28,6 +28,12 @@ next time it refreshes (every ~45 seconds while open, or on Refresh).
    The URL stays the same, so you don't change anything in the pages.
 5. Open the editor link, enter the **edit** passphrase.
 
+### Budget cover and payment notes (new)
+
+- **Budget cover:** under *Remaining to pay*, both pages show Charles's and Justine's budget left, and whether the two together cover what's left to pay ("Enough, ₱X to spare" or "Short by ₱X"). Pages only, no script change.
+- **Payment notes:** the *+ Payment* box has an optional Note. The note shows in the Payment history and is searchable. In the editor, each history entry has an **Add note / Edit note** button; the dashboard shows notes read-only.
+- **Needs a script redeploy** (paste the new `Code.gs`, then **Deploy > Manage deployments > pencil > New version > Deploy**). The Payment Log tab gains two columns, *Note* and *Entry ID*; don't delete them.
+
 ### Who paid what (new)
 
 On both pages, each person's budget card has a **Who paid what** button. It lists every item that person has paid toward, largest first, with their share of their own payments and how much of each item they covered. It uses figures the pages already load, so **no script change or redeploy is needed** for it.

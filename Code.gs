@@ -51,6 +51,10 @@ function doPost(e) {
   try {
     if (req.action === 'read') return json_(readAll_(auth.role, false));
     if (req.action === 'log') return json_(readLog_());
+    if (req.action === 'lognote') {
+      if (auth.role !== 'edit') return json_({ ok: false, error: 'forbidden' });
+      return json_(withLock_(function () { return setLogNote_(req); }));
+    }
     if (WRITE_ACTIONS[req.action]) {
       if (auth.role !== 'edit') return json_({ ok: false, error: 'forbidden' });
       return json_(withLock_(function () { return handleWrite_(req); }));
@@ -296,12 +300,40 @@ function logSheet_() {
   var sh = ss.getSheetByName(LOG_NAME);
   if (!sh) {
     sh = ss.insertSheet(LOG_NAME, ss.getNumSheets());
-    var head = sh.getRange(1, 1, 1, 7);
-    head.setValues([['Date & time (Manila)', 'Item', 'Paid by', 'Amount', 'Type', 'Item ID', 'Timestamp (ISO)']]);
-    head.setFontWeight('bold');
     sh.setFrozenRows(1);
   }
+  // (re)write the header so logs created before notes existed gain the Note and Entry ID columns
+  var head = sh.getRange(1, 1, 1, 9);
+  head.setValues([['Date & time (Manila)', 'Item', 'Paid by', 'Amount', 'Type', 'Item ID', 'Timestamp (ISO)', 'Note', 'Entry ID']]);
+  head.setFontWeight('bold');
   return sh;
+}
+
+function cleanNote_(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v !== 'string') return null;
+  v = v.trim();
+  return v.length > 300 ? null : v;
+}
+
+// Edit the note of one log entry (found by its Entry ID; older entries use "row<N>" plus their timestamp).
+function setLogNote_(req) {
+  var note = cleanNote_(req.note);
+  if (note === null) return err_('invalid', 'note', 'Note must be text up to 300 characters');
+  var sh = SpreadsheetApp.getActive().getSheetByName(LOG_NAME);
+  if (!sh || sh.getLastRow() < 2) return err_('not_found');
+  var id = String(req.id || '');
+  var rows = sh.getRange(2, 1, sh.getLastRow() - 1, 9).getValues();
+  var row = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var rid = rows[i][8] ? String(rows[i][8]) : 'row' + (i + 2);
+    if (rid === id && String(rows[i][6]) === String(req.at)) { row = i + 2; break; }
+  }
+  if (!row) return err_('not_found');
+  var cell = sh.getRange(row, 8);
+  cell.setNumberFormat('@');
+  cell.setValue(safeText_(note));
+  return { ok: true, id: id, note: note };
 }
 
 function safeText_(s) {
@@ -316,21 +348,25 @@ function logTxns_(txns, itemId) {
   var stamp = Utilities.formatDate(now, LOG_TZ, 'yyyy-MM-dd HH:mm:ss');
   txns.forEach(function (t) {
     var r = sh.getLastRow() + 1;
-    var rng = sh.getRange(r, 1, 1, 7);
-    rng.setNumberFormats([['@', '@', '@', '#,##0.00', '@', '@', '@']]);   // keep the date as text, exactly as written
-    rng.setValues([[stamp, safeText_(t.item), t.who, t.amount, t.kind, itemId || '', now.toISOString()]]);
+    var rng = sh.getRange(r, 1, 1, 9);
+    rng.setNumberFormats([['@', '@', '@', '#,##0.00', '@', '@', '@', '@', '@']]);   // keep the date as text, exactly as written
+    rng.setValues([[stamp, safeText_(t.item), t.who, t.amount, t.kind, itemId || '', now.toISOString(), safeText_(t.note || ''), Utilities.getUuid().slice(0, 8)]]);
   });
 }
 
 function readLog_() {
   var sh = SpreadsheetApp.getActive().getSheetByName(LOG_NAME);
   if (!sh || sh.getLastRow() < 2) return { ok: true, entries: [] };
-  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 7).getValues();
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 9).getValues();
   var entries = [];
   for (var i = v.length - 1; i >= 0 && entries.length < 2000; i--) {   // newest first
     var r = v[i];
     if (!r[6]) continue;
-    entries.push({ at: String(r[6]), item: String(r[1]).replace(/^'/, ''), who: String(r[2]), amount: num_(r[3]), kind: String(r[4]), itemId: String(r[5]) });
+    entries.push({
+      id: r[8] ? String(r[8]) : 'row' + (i + 2),
+      at: String(r[6]), item: String(r[1]).replace(/^'/, ''), who: String(r[2]), amount: num_(r[3]),
+      kind: String(r[4]), itemId: String(r[5]), note: String(r[7] || '').replace(/^'/, '')
+    });
   }
   return { ok: true, entries: entries };
 }
@@ -466,6 +502,9 @@ function payItem_(sheet, req) {
   var amt = req.amount;
   if (typeof amt !== 'number' || !isFinite(amt) || amt <= 0 || amt > MAX_MONEY) return err_('invalid', 'amount', 'Enter a payment above 0');
 
+  var note = cleanNote_(req.note);
+  if (note === null) return err_('invalid', 'note', 'Note must be text up to 300 characters');
+
   var cur = itemAt_(sheet, row);
   var base = {};
   if (typeof req.base === 'number') base[key] = req.base;
@@ -477,7 +516,7 @@ function payItem_(sheet, req) {
 
   var next = {}; next[key] = round2_(cur[key] + amt);
   writeFields_(sheet, row, next);
-  return { ok: true, row: row, txns: [{ who: key === 'paidCharles' ? 'Charles' : 'Justine', amount: round2_(amt), kind: 'Payment', item: cur.name }] };
+  return { ok: true, row: row, txns: [{ who: key === 'paidCharles' ? 'Charles' : 'Justine', amount: round2_(amt), kind: 'Payment', item: cur.name, note: note }] };
 }
 
 // "Delete" empties the item's input cells (and notes). The row, its formulas and

@@ -141,6 +141,24 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
 .brow .bar{margin:6px 0 2px}
 .dlg .row .left{margin-right:auto}
 
+/* budget cover */
+.cover{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.cover > div{background:rgba(255,255,255,.55);border-radius:12px;padding:8px 12px}
+@media (prefers-color-scheme:dark){.cover > div{background:rgba(255,255,255,.07)}}
+.cover .k{font-size:.75rem;color:var(--muted)}
+.cover .v{font-family:Georgia,serif;font-size:1.05rem}
+.cover .v.bad{color:var(--warn)}
+.cover .wide{grid-column:1/-1}
+.cover .verdict{font-weight:600}
+.cover .verdict.ok{color:var(--sage-deep)}
+.cover .verdict.bad{color:var(--warn)}
+.cover .sub{font-size:.8rem;color:var(--muted)}
+@media (min-width:640px){.cover{grid-template-columns:repeat(3,1fr)}.cover .wide{grid-column:auto}}
+.hnote{font-size:.85rem;margin-top:3px;overflow-wrap:anywhere}
+.hnote.empty{color:var(--muted);font-style:italic}
+.hrow .mini{margin-top:4px}
+.hero .cover{grid-column:1/-1;margin-top:0}
+
 @media (min-width:640px){
   .hero{grid-template-columns:2fr 1fr 1fr;align-items:end}
   .hero .main{grid-column:auto}
@@ -184,6 +202,7 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
       <div class="main"><div class="k">Remaining to pay</div><div class="v" id="hRem">—</div></div>
       <div><div class="k">Total budget</div><div class="v" id="hTotal">—</div></div>
       <div><div class="k">Paid so far</div><div class="v" id="hPaid">—</div></div>
+      <div class="cover" id="cover"></div>
     </section>
 
     <section class="people" id="people"></section>
@@ -229,6 +248,7 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
   <div class="field"><label>Paid by</label>
     <div class="seg" id="payWho"><button type="button" data-w="charles" aria-pressed="true">Charles</button><button type="button" data-w="justine" aria-pressed="false">Justine</button></div></div>
   <div class="field"><label for="payAmt">Payment amount (₱)</label><input id="payAmt" inputmode="decimal" autocomplete="off" placeholder="0.00"><div class="e" id="ePay"></div></div>
+  <div class="field"><label for="payNote">Note (optional)</label><input id="payNote" maxlength="300" autocomplete="off" placeholder="e.g. 2nd installment, GCash ref 1234"></div>
   <div class="hint" id="payHint"></div>
   <div class="row"><button type="button" class="btn" id="payCancel">Cancel</button><button type="submit" class="btn primary">Add payment</button></div>
 </form></dialog>
@@ -262,7 +282,7 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
   <h3 class="serif">Payment history</h3>
   <p class="sub">Every payment recorded through this app, newest first. Manila time.</p>
   <div id="hFilter"></div>
-  <div class="field"><input id="hQ" type="search" placeholder="Search item or person…" autocomplete="off"></div>
+  <div class="field"><input id="hQ" type="search" placeholder="Search item, person or note…" autocomplete="off"></div>
   <div id="hBody"></div>
   <p class="hist-note">Payments typed directly into Google Sheets are not recorded here.</p>
   <div class="row"><button type="button" class="btn" id="hClose">Close</button></div>
@@ -276,6 +296,14 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
   <div id="brkBody"></div>
   <div class="row"><button type="button" class="btn left" id="brkLog">Dated payments</button><button type="button" class="btn" id="brkClose">Close</button></div>
 </div></dialog>
+
+<!-- Edit a payment note -->
+<dialog id="noteDlg"><form class="dlg" id="noteForm" novalidate>
+  <h3 class="serif">Payment note</h3>
+  <p class="sub" id="noteSub"></p>
+  <div class="field"><label for="noteText">Note</label><textarea id="noteText" maxlength="300"></textarea><div class="e" id="eNote"></div></div>
+  <div class="row"><button type="button" class="btn" id="noteCancel">Cancel</button><button type="submit" class="btn primary" id="noteSave">Save note</button></div>
+</form></dialog>
 
 <script>
 (function(){
@@ -295,6 +323,16 @@ var store = {
 var $ = function(id){return document.getElementById(id)};
 var money = new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'});
 var timeFmt = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'});
+
+function coverHtml(d){
+  var c = d.budgets.charles ? d.budgets.charles.remaining : 0, j = d.budgets.justine ? d.budgets.justine.remaining : 0;
+  var left = d.totals.remaining, spare = Math.round((c + j - left)*100)/100, enough = spare >= 0;
+  return '<div><div class="k">Charles’s budget left</div><div class="v'+(c<0?' bad':'')+'">'+money.format(c)+'</div></div>'+
+    '<div><div class="k">Justine’s budget left</div><div class="v'+(j<0?' bad':'')+'">'+money.format(j)+'</div></div>'+
+    '<div class="wide"><div class="k">Is the budget enough for what’s left to pay?</div>'+
+    '<div class="v verdict '+(enough?'ok':'bad')+'">'+(enough ? '✓ Enough · '+money.format(spare)+' to spare' : '✕ Short by '+money.format(-spare))+'</div>'+
+    '<div class="sub">Both budgets left '+money.format(c+j)+' vs '+money.format(left)+' to pay</div></div>';
+}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function clone(o){return JSON.parse(JSON.stringify(o))}
 function uuid(){
@@ -527,6 +565,7 @@ function render(){
   var d = state.data; if(!d) return;
   var T = d.totals;
   $('hRem').textContent = money.format(T.remaining);
+  $('cover').innerHTML = coverHtml(d);
   $('hTotal').textContent = money.format(T.amount);
   $('hPaid').textContent = money.format(T.paidCharles+T.paidJustine);
   $('people').innerHTML = [['charles','Charles',T.paidCharles],['justine','Justine',T.paidJustine]].map(function(p){
@@ -645,7 +684,7 @@ function setWho(w){ payWho = w; [].forEach.call($('payWho').children, function(b
 function openPay(id){
   current = findItem(id); if(!current) return;
   $('paySub').textContent = current.name + ' · remaining ' + money.format(current.remaining);
-  $('payAmt').value = ''; showErr('ePay',''); setWho('charles');
+  $('payAmt').value = ''; $('payNote').value = ''; showErr('ePay',''); setWho('charles');
   $('payHint').textContent = 'Charles has paid '+money.format(current.paidCharles)+' · Justine has paid '+money.format(current.paidJustine)+'. The payment is added on top.';
   $('payDlg').showModal(); $('payAmt').focus();
 }
@@ -656,7 +695,7 @@ $('payForm').addEventListener('submit', function(e){
   if(isNaN(n) || n <= 0){ showErr('ePay','Enter a payment above 0 (numbers only)'); return; }
   var it = current; if(!it) return;
   var key = payWho==='charles' ? 'paidCharles' : 'paidJustine';
-  enqueue('pay', {id:it.id, who:payWho, amount:n, base:it[key]});
+  enqueue('pay', {id:it.id, who:payWho, amount:n, base:it[key], note:$('payNote').value.trim()});
   $('payDlg').close();
 });
 $('payCancel').addEventListener('click', function(){ $('payDlg').close(); });
@@ -709,7 +748,7 @@ function openHistory(id, name, q){
 function renderHistory(){
   var q = hist.q.trim().toLowerCase();
   var rows = (hist.rows||[]).filter(function(r){
-    return (!hist.id || r.itemId===hist.id) && (!q || (r.item+' '+r.who+' '+r.kind).toLowerCase().indexOf(q) >= 0);
+    return (!hist.id || r.itemId===hist.id) && (!q || (r.item+' '+r.who+' '+r.kind+' '+(r.note||'')).toLowerCase().indexOf(q) >= 0);
   });
   $('hFilter').innerHTML = hist.id ? '<div class="banner info"><span>Showing only “'+esc(hist.name)+'”</span><button class="btn small" id="hAll" type="button">Show all</button></div>' : '';
   if(!rows.length){ $('hBody').innerHTML = '<div class="empty">No payments logged yet.</div>'; return; }
@@ -720,7 +759,8 @@ function renderHistory(){
     var d = new Date(r.at), label = histDay.format(d);
     if(label !== day){ day = label; html += '<div class="hday">'+esc(label)+'</div>'; }
     var neg = r.amount < 0;
-    html += '<div class="hrow"><div class="l"><b>'+esc(r.item)+'</b><span>'+esc(r.who)+' · '+esc(timeFmt.format(d))+' · '+esc(r.kind)+'</span></div>'+
+    html += '<div class="hrow"><div class="l"><b>'+esc(r.item)+'</b><span>'+esc(r.who)+' · '+esc(timeFmt.format(d))+' · '+esc(r.kind)+'</span>'+
+      (r.note ? '<div class="hnote">'+esc(r.note)+'</div>' : '')+'<div class="mini"><button class="btn small" data-note="'+esc(r.id)+'" type="button">'+(r.note?'Edit note':'Add note')+'</button></div>'+'</div>'+
       '<div class="amt'+(neg?' neg':'')+'">'+(neg?'−':'+')+money.format(Math.abs(r.amount))+'</div></div>';
   });
   $('hBody').innerHTML = html;
@@ -765,6 +805,30 @@ function renderBreakdown(){
 $('brkWho').addEventListener('click', function(e){ var b = e.target.closest('button'); if(b){ brkWho = b.dataset.w; renderBreakdown(); } });
 $('brkClose').addEventListener('click', function(){ $('brkDlg').close(); });
 $('brkLog').addEventListener('click', function(){ $('brkDlg').close(); openHistory(null, '', brkWho==='charles' ? 'Charles' : 'Justine'); });
+
+
+/* ---------- edit a payment note from the history ---------- */
+var noteEntry = null;
+$('hBody').addEventListener('click', function(e){
+  var b = e.target.closest('[data-note]'); if(!b) return;
+  noteEntry = (hist.rows||[]).filter(function(r){return r.id===b.dataset.note})[0]; if(!noteEntry) return;
+  $('noteSub').textContent = noteEntry.item+' · '+noteEntry.who+' · '+money.format(Math.abs(noteEntry.amount));
+  $('noteText').value = noteEntry.note || ''; showErr('eNote',''); $('histDlg').close(); $('noteDlg').showModal(); $('noteText').focus();
+});
+function backToHistory(){ $('noteDlg').close(); $('histDlg').showModal(); renderHistory(); }
+$('noteCancel').addEventListener('click', backToHistory);
+$('noteForm').addEventListener('submit', function(e){
+  e.preventDefault(); if(!noteEntry) return;
+  var text = $('noteText').value.trim(); $('noteSave').disabled = true; showErr('eNote','Saving…');
+  api('lognote', {id:noteEntry.id, at:noteEntry.at, note:text}).then(function(res){
+    $('noteSave').disabled = false;
+    if(!res.ok){
+      if(authFail(res)) return;
+      showErr('eNote', res.error==='not_found' ? 'That entry could not be found in the Payment Log (was it moved or deleted?)' : (res.message || 'Could not save the note.')); return;
+    }
+    noteEntry.note = res.note; backToHistory();
+  }).catch(function(){ $('noteSave').disabled = false; showErr('eNote','No connection. Your note was not saved; please try again.'); });
+});
 
 /* ---------- lock / unlock ---------- */
 function showApp(){ $('gate').hidden = true; $('app').hidden = false; }

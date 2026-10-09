@@ -156,6 +156,23 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
 .brow .bar{margin:6px 0 2px}
 .dlg .row .left{margin-right:auto}
 
+/* budget cover */
+.cover{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.cover > div{background:rgba(255,255,255,.55);border-radius:12px;padding:8px 12px}
+@media (prefers-color-scheme:dark){.cover > div{background:rgba(255,255,255,.07)}}
+.cover .k{font-size:.75rem;color:var(--muted)}
+.cover .v{font-family:Georgia,serif;font-size:1.05rem}
+.cover .v.bad{color:var(--warn)}
+.cover .wide{grid-column:1/-1}
+.cover .verdict{font-weight:600}
+.cover .verdict.ok{color:var(--sage-deep)}
+.cover .verdict.bad{color:var(--warn)}
+.cover .sub{font-size:.8rem;color:var(--muted)}
+@media (min-width:640px){.cover{grid-template-columns:repeat(3,1fr)}.cover .wide{grid-column:auto}}
+.hnote{font-size:.85rem;margin-top:3px;overflow-wrap:anywhere}
+.hnote.empty{color:var(--muted);font-style:italic}
+.hrow .mini{margin-top:4px}
+
 @media (min-width:640px){
   .tiles{grid-template-columns:repeat(4,1fr)}
   .people{grid-template-columns:1fr 1fr}
@@ -202,6 +219,7 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
     <section class="hero" aria-label="Summary">
       <div class="label">Remaining to pay</div>
       <div class="big" id="hRemaining">—</div>
+      <div class="cover" id="cover"></div>
       <div class="meter" id="hMeter"></div>
       <div class="legend"><span><b class="c-ch"></b>Paid by Charles</span><span><b class="c-ju"></b>Paid by Justine</span><span id="hPct"></span></div>
       <div class="tiles">
@@ -244,7 +262,7 @@ dialog::backdrop{background:rgba(20,30,40,.55)}
   <h3 class="serif">Payment history</h3>
   <p class="sub">Every payment recorded through this app, newest first. Manila time.</p>
   <div id="hFilter"></div>
-  <div class="field"><input id="hQ" type="search" placeholder="Search item or person…" autocomplete="off"></div>
+  <div class="field"><input id="hQ" type="search" placeholder="Search item, person or note…" autocomplete="off"></div>
   <div id="hBody"></div>
   <p class="hist-note">Payments typed directly into Google Sheets are not recorded here.</p>
   <div class="row"><button type="button" class="btn" id="hClose">Close</button></div>
@@ -278,6 +296,16 @@ var $ = function(id){return document.getElementById(id)};
 var money = new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'});
 var timeFmt = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',hour:'numeric',minute:'2-digit'});
 var dayFmt  = new Intl.DateTimeFormat('en-PH',{timeZone:'Asia/Manila',month:'short',day:'numeric'});
+
+function coverHtml(d){
+  var c = d.budgets.charles ? d.budgets.charles.remaining : 0, j = d.budgets.justine ? d.budgets.justine.remaining : 0;
+  var left = d.totals.remaining, spare = Math.round((c + j - left)*100)/100, enough = spare >= 0;
+  return '<div><div class="k">Charles’s budget left</div><div class="v'+(c<0?' bad':'')+'">'+money.format(c)+'</div></div>'+
+    '<div><div class="k">Justine’s budget left</div><div class="v'+(j<0?' bad':'')+'">'+money.format(j)+'</div></div>'+
+    '<div class="wide"><div class="k">Is the budget enough for what’s left to pay?</div>'+
+    '<div class="v verdict '+(enough?'ok':'bad')+'">'+(enough ? '✓ Enough · '+money.format(spare)+' to spare' : '✕ Short by '+money.format(-spare))+'</div>'+
+    '<div class="sub">Both budgets left '+money.format(c+j)+' vs '+money.format(left)+' to pay</div></div>';
+}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function pct(n){return (Math.round(n*1000)/10).toFixed(1).replace(/\.0$/,'')+'%'}
 
@@ -347,6 +375,7 @@ function render(){
   var used = T.amount ? paid/T.amount : 0;
 
   $('hRemaining').textContent = money.format(T.remaining);
+  $('cover').innerHTML = coverHtml(d);
   $('tTotal').textContent = money.format(T.amount);
   $('tPaid').textContent  = money.format(paid);
   $('tRem').textContent   = money.format(T.remaining);
@@ -436,7 +465,7 @@ function openHistory(id, name, q){
 function renderHistory(){
   var q = hist.q.trim().toLowerCase();
   var rows = (hist.rows||[]).filter(function(r){
-    return (!hist.id || r.itemId===hist.id) && (!q || (r.item+' '+r.who+' '+r.kind).toLowerCase().indexOf(q) >= 0);
+    return (!hist.id || r.itemId===hist.id) && (!q || (r.item+' '+r.who+' '+r.kind+' '+(r.note||'')).toLowerCase().indexOf(q) >= 0);
   });
   $('hFilter').innerHTML = hist.id ? '<div class="banner info"><span>Showing only “'+esc(hist.name)+'”</span><button class="btn small" id="hAll" type="button">Show all</button></div>' : '';
   if(!rows.length){ $('hBody').innerHTML = '<div class="empty">No payments logged yet.</div>'; return; }
@@ -447,7 +476,8 @@ function renderHistory(){
     var d = new Date(r.at), label = histDay.format(d);
     if(label !== day){ day = label; html += '<div class="hday">'+esc(label)+'</div>'; }
     var neg = r.amount < 0;
-    html += '<div class="hrow"><div class="l"><b>'+esc(r.item)+'</b><span>'+esc(r.who)+' · '+esc(timeFmt.format(d))+' · '+esc(r.kind)+'</span></div>'+
+    html += '<div class="hrow"><div class="l"><b>'+esc(r.item)+'</b><span>'+esc(r.who)+' · '+esc(timeFmt.format(d))+' · '+esc(r.kind)+'</span>'+
+      (r.note ? '<div class="hnote">'+esc(r.note)+'</div>' : '')+'</div>'+
       '<div class="amt'+(neg?' neg':'')+'">'+(neg?'−':'+')+money.format(Math.abs(r.amount))+'</div></div>';
   });
   $('hBody').innerHTML = html;
